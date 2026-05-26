@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>When the world crosses 2°C — CMIP6 threshold explorer</title>
+<title>2°C Is Not Just One Deadline — an explorable explanation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
@@ -20,83 +20,216 @@
       <span>CMIP6 · CESM2 · scenario projections 2015–2100</span>
     </div>
     <h1>
-      When does the<br>world cross<br>
-      <span class="hero-num" id="hero-threshold">2°C</span>?
+      2°C is not<br>
+      <span class="hero-num">one deadline.</span><br>
+      It is many.
     </h1>
-    <h2>
-      By YangYang, Rocio, & Hoang
-    </h2>
+    <h2>An explorable explanation by YangYang, Rocio, & Hoang</h2>
     <p class="hero-sub">
-      Global warming isn't uniform. The Arctic heats up four times faster than the
-      tropics; continents outpace oceans; and under different emissions scenarios,
-      regions cross dangerous warming thresholds decades apart. Click anywhere on
-      the map to see when warming arrives there and how much depends on what
-      humans choose to do.
+      The world agreed on +2°C as a dangerous warming line. But that number is a
+      <em>global</em> average. The Arctic crosses it long before the tropics; some
+      regions hit it before today's high-schoolers retire. Scroll to see how a
+      single global line becomes hundreds of local deadlines — and how much they
+      shift when the world cuts emissions.
     </p>
+    <div class="hero-scroll-hint">scroll ↓</div>
   </div>
 </header>
 
-<!-- ============== CONTROLS ============== -->
-<section class="controls" id="controls">
-  <div class="controls-row">
-    <!-- Scenario tabs -->
+<!-- ============== SCROLLYTELLING ============== -->
+<div class="scrolly" id="scrolly">
+
+  <!-- LEFT: scrolling text steps -->
+  <div class="scroll-text">
+
+    <section class="story-step" data-step="1">
+      <div class="step-card">
+        <h2 class="step-title">When does the world cross +2°C?</h2>
+        <p>
+          Under SSP2-4.5 — roughly today's policy trajectory — the map shows the
+          first year each region's annual temperature climbs above +2°C relative
+          to the 2015–2034 baseline. Some places are already there. Others won't
+          cross within this century at all.
+        </p>
+        <p class="step-prompt">Hover any cell to see when warming arrives for that location.</p>
+      </div>
+    </section>
+
+    <section class="story-step" data-step="2">
+      <div class="step-card">
+        <h2 class="step-title">Some regions cross decades before others.</h2>
+        <p>
+          The Arctic crosses +2°C roughly <b>30 years earlier</b> than the
+          tropical belt — a phenomenon called <i>Arctic amplification</i>. Land
+          warms faster than ocean. Continental interiors warm faster than
+          coasts. A single global threshold hides this huge spread of local
+          deadlines.
+        </p>
+        <div class="step-controls" data-controls-for="2">
+          <div class="inline-control">
+            <span class="inline-label">Scenario</span>
+            <div class="seg-control mini" id="scenario-control-2">
+              <button class="seg-btn" data-value="ssp126">SSP1-2.6</button>
+              <button class="seg-btn active" data-value="ssp245">SSP2-4.5</button>
+              <button class="seg-btn" data-value="ssp585">SSP5-8.5</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="story-step" data-step="3">
+      <div class="step-card">
+        <h2 class="step-title">Strong action buys years — but not equally.</h2>
+        <p>
+          This map shows <b>years gained</b> by mitigation: how much later each
+          region crosses the threshold under SSP1-2.6 (strong mitigation)
+          compared to SSP5-8.5 (high emissions). Darker green means a stronger
+          payoff — sometimes decades of warming postponed. Gray regions cross
+          under both scenarios, or escape under neither.
+        </p>
+        <div class="step-controls" data-controls-for="3">
+          <div class="inline-control">
+            <span class="inline-label">Threshold</span>
+            <div class="seg-control mini" id="threshold-control-3">
+              <button class="seg-btn" data-value="1.5">1.5°C</button>
+              <button class="seg-btn active" data-value="2.0">2°C</button>
+              <button class="seg-btn" data-value="3.0">3°C</button>
+              <button class="seg-btn" data-value="4.0">4°C</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="story-step" data-step="4">
+      <div class="step-card">
+        <h2 class="step-title">Which regions cross first?</h2>
+        <p>
+          A race chart makes the regional inequality unmistakable. Each bar is
+          one named region; the marker is the year that region's area-weighted
+          mean crosses the selected threshold. The Arctic always finishes
+          first. The Antarctic and parts of the tropics may not cross at all.
+        </p>
+        <div class="step-controls" data-controls-for="4">
+          <div class="inline-control">
+            <span class="inline-label">Scenario</span>
+            <div class="seg-control mini" id="scenario-control-4">
+              <button class="seg-btn" data-value="ssp126">SSP1-2.6</button>
+              <button class="seg-btn" data-value="ssp245">SSP2-4.5</button>
+              <button class="seg-btn active" data-value="ssp585">SSP5-8.5</button>
+            </div>
+          </div>
+          <div class="inline-control">
+            <span class="inline-label">Threshold</span>
+            <div class="seg-control mini" id="threshold-control-4">
+              <button class="seg-btn" data-value="1.5">1.5°C</button>
+              <button class="seg-btn active" data-value="2.0">2°C</button>
+              <button class="seg-btn" data-value="3.0">3°C</button>
+              <button class="seg-btn" data-value="4.0">4°C</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="story-step" data-step="5">
+      <div class="step-card">
+        <h2 class="step-title">How does <em>your</em> place compare?</h2>
+        <p>
+          Pick a location on the map. The chart on the right overlays your
+          local warming curve against the global average — so you can see
+          whether your region crosses the threshold earlier or later than the
+          world as a whole. Then change scenario and threshold to see how much
+          of the timing is up to us.
+        </p>
+        <p class="step-prompt">All controls are unlocked below — explore.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- RIGHT: sticky viz stage -->
+  <div class="scroll-viz">
+    <div class="viz-stage">
+
+      <!-- Map (used by steps 1, 2, 5) -->
+      <div class="viz-panel" data-panel="map">
+        <div class="panel-head">
+          <h3 class="panel-title" id="map-title">First year crossing +2°C</h3>
+          <p class="panel-sub" id="map-sub">SSP2-4.5 · relative to 2015–2034 baseline</p>
+        </div>
+        <div class="map-wrap">
+          <svg id="map" role="img" aria-label="World map of warming threshold crossing years"></svg>
+          <div class="tooltip" id="tooltip" role="tooltip"></div>
+          <div class="map-overlay-msg" id="map-loading">Loading climate data…</div>
+          <div class="map-legend" id="map-legend"></div>
+        </div>
+      </div>
+
+      <!-- Mitigation map (step 3) -->
+      <div class="viz-panel" data-panel="mitigation" hidden>
+        <div class="panel-head">
+          <h3 class="panel-title">Years gained by strong mitigation</h3>
+          <p class="panel-sub">SSP1-2.6 crossing year minus SSP5-8.5 crossing year, per region</p>
+        </div>
+        <div class="map-wrap">
+          <svg id="mitigation-map" role="img" aria-label="Years gained by mitigation"></svg>
+          <div class="map-legend" id="mitigation-legend"></div>
+        </div>
+      </div>
+
+      <!-- Race chart (step 4) -->
+      <div class="viz-panel" data-panel="race" hidden>
+        <div class="panel-head">
+          <h3 class="panel-title">Regional race to the threshold</h3>
+          <p class="panel-sub" id="race-sub">SSP5-8.5 · 2°C</p>
+        </div>
+        <svg id="race-chart" role="img" aria-label="Regional race chart"></svg>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============== EXPLORE SECTION (step 5 full viz) ============== -->
+<section class="explore" id="explore">
+  <div class="explore-controls">
     <div class="control-group">
-      <div class="control-label">Emissions scenario</div>
-      <div class="seg-control" id="scenario-control" role="tablist" aria-label="Emissions scenario">
-        <button class="seg-btn" data-value="ssp126" role="tab">
+      <div class="control-label">Scenario</div>
+      <div class="seg-control" id="scenario-control" role="tablist">
+        <button class="seg-btn" data-value="ssp126">
           <span class="seg-name">SSP1-2.6</span>
           <span class="seg-desc">Strong mitigation</span>
         </button>
-        <button class="seg-btn" data-value="ssp245" role="tab">
+        <button class="seg-btn active" data-value="ssp245">
           <span class="seg-name">SSP2-4.5</span>
           <span class="seg-desc">Middle of the road</span>
         </button>
-        <button class="seg-btn active" data-value="ssp585" role="tab">
+        <button class="seg-btn" data-value="ssp585">
           <span class="seg-name">SSP5-8.5</span>
           <span class="seg-desc">Fossil-fueled</span>
         </button>
       </div>
     </div>
-
-    <!-- Threshold slider -->
     <div class="control-group">
-      <div class="control-label">Warming threshold</div>
-      <div class="seg-control" id="threshold-control" role="tablist" aria-label="Warming threshold">
-        <button class="seg-btn" data-value="1.5">
-          <span class="seg-name">1.5°C</span>
-          <span class="seg-desc">Paris goal</span>
-        </button>
-        <button class="seg-btn active" data-value="2.0">
-          <span class="seg-name">2°C</span>
-          <span class="seg-desc">Paris ceiling</span>
-        </button>
-        <button class="seg-btn" data-value="3.0">
-          <span class="seg-name">3°C</span>
-          <span class="seg-desc">Severe</span>
-        </button>
-        <button class="seg-btn" data-value="4.0">
-          <span class="seg-name">4°C</span>
-          <span class="seg-desc">Catastrophic</span>
-        </button>
+      <div class="control-label">Threshold</div>
+      <div class="seg-control" id="threshold-control" role="tablist">
+        <button class="seg-btn" data-value="1.5"><span class="seg-name">1.5°C</span></button>
+        <button class="seg-btn active" data-value="2.0"><span class="seg-name">2°C</span></button>
+        <button class="seg-btn" data-value="3.0"><span class="seg-name">3°C</span></button>
+        <button class="seg-btn" data-value="4.0"><span class="seg-name">4°C</span></button>
       </div>
     </div>
-
-    <!-- View mode -->
     <div class="control-group">
       <div class="control-label">Map shows</div>
       <div class="seg-control" id="mode-control">
-        <button class="seg-btn active" data-value="crossing">
-          <span class="seg-name">First crossing year</span>
-        </button>
-        <button class="seg-btn" data-value="anomaly">
-          <span class="seg-name">Anomaly in</span>
-          <span class="seg-desc"><span id="year-readout">2050</span></span>
-        </button>
+        <button class="seg-btn active" data-value="crossing"><span class="seg-name">First crossing year</span></button>
+        <button class="seg-btn" data-value="anomaly"><span class="seg-name">Anomaly in <span id="year-readout">2050</span></span></button>
       </div>
     </div>
   </div>
 
-  <!-- Year scrubber (visible only in 'anomaly' mode) -->
   <div class="year-scrubber" id="year-scrubber" hidden>
     <div class="scrubber-row">
       <button id="play-btn" class="play-btn" aria-label="Play">
@@ -105,211 +238,101 @@
       <div class="scrubber-stack">
         <input type="range" id="year-slider" min="2015" max="2100" step="1" value="2050" />
         <div class="scrubber-ticks">
-          <span>2015</span>
-          <span>2040</span>
-          <span>2060</span>
-          <span>2080</span>
-          <span>2100</span>
+          <span>2015</span><span>2040</span><span>2060</span><span>2080</span><span>2100</span>
         </div>
       </div>
       <div class="year-tick" id="year-tick">2050</div>
     </div>
   </div>
-</section>
 
-<!-- ============== MAIN VIZ ============== -->
-<main class="viz-grid">
-
-  <!-- Map -->
-  <section class="card map-card">
-    <header class="card-head">
-      <div>
-        <h2 class="card-title" id="map-title">First year each region crosses +2°C</h2>
-        <p class="card-sub" id="map-sub">Under SSP5-8.5 · relative to 2015–2034 baseline · click a cell to inspect</p>
+  <div class="explore-grid">
+    <section class="card explore-map-card">
+      <div class="map-wrap">
+        <svg id="explore-map" role="img" aria-label="Interactive world map"></svg>
+        <div class="tooltip" id="explore-tooltip" role="tooltip"></div>
+        <div class="map-legend" id="explore-legend"></div>
       </div>
-      <div class="map-legend" id="map-legend">
-        <!-- filled by JS -->
-      </div>
-    </header>
-    <div class="map-wrap">
-      <svg id="map" role="img" aria-label="World map of warming threshold crossing years"></svg>
-      <div class="tooltip" id="tooltip" role="tooltip"></div>
-      <div class="map-overlay-msg" id="map-loading">Loading climate data…</div>
-    </div>
-    <footer class="card-foot">
-      <div class="foot-stat">
-        <span class="foot-num" id="stat-pct-crossed">—</span>
-        <span class="foot-lbl">of land area crosses by 2100</span>
-      </div>
-      <div class="foot-stat">
-        <span class="foot-num" id="stat-median-year">—</span>
-        <span class="foot-lbl">median crossing year</span>
-      </div>
-      <div class="foot-stat">
-        <span class="foot-num" id="stat-first-region">—</span>
-        <span class="foot-lbl">first region to cross</span>
-      </div>
-    </footer>
-  </section>
-
-  <!-- Right column: global means + cell ts + histogram -->
-  <aside class="side-col">
-
-    <!-- Global means line chart -->
-    <section class="card">
-      <header class="card-head compact">
-        <div>
+      <footer class="card-foot">
+        <div class="foot-stat"><span class="foot-num" id="stat-pct-crossed">—</span><span class="foot-lbl">of land crosses by 2100</span></div>
+        <div class="foot-stat"><span class="foot-num" id="stat-median-year">—</span><span class="foot-lbl">median crossing year</span></div>
+        <div class="foot-stat"><span class="foot-num" id="stat-first-region">—</span><span class="foot-lbl">first region to cross</span></div>
+      </footer>
+    </section>
+    <aside class="explore-side">
+      <section class="card">
+        <header class="card-head compact">
+          <h3 class="card-title" id="cell-title">Click a region on the map</h3>
+          <p class="card-sub" id="cell-sub">Local vs. global comparison appears here.</p>
+        </header>
+        <div class="region-chips" id="region-chips"></div>
+        <svg id="cell-chart" class="side-chart"></svg>
+      </section>
+      <section class="card">
+        <header class="card-head compact">
           <h3 class="card-title">Global temperature trajectory</h3>
           <p class="card-sub">Area-weighted global-mean anomaly · all scenarios</p>
-        </div>
-      </header>
-      <svg id="global-chart" class="side-chart"></svg>
-    </section>
+        </header>
+        <svg id="global-chart" class="side-chart"></svg>
+      </section>
+    </aside>
+  </div>
+</section>
 
-    <!-- Cell time series -->
-    <section class="card" id="cell-card">
-      <header class="card-head compact">
-        <div>
-          <h3 class="card-title" id="cell-title">Click a region on the map</h3>
-          <p class="card-sub" id="cell-sub">Or pick one below to compare regional warming.</p>
-        </div>
-      </header>
-      <div class="region-chips" id="region-chips">
-        <!-- filled by JS -->
-      </div>
-      <svg id="cell-chart" class="side-chart"></svg>
-    </section>
-
-    <!-- Histogram -->
-    <section class="card">
-      <header class="card-head compact">
-        <div>
-          <h3 class="card-title">Distribution of crossing years</h3>
-          <p class="card-sub">Across all grid cells · current scenario & threshold</p>
-        </div>
-      </header>
-      <svg id="histogram" class="side-chart"></svg>
-    </section>
-
-  </aside>
-</main>
-
-<!-- ============== WRITEUP ============== -->
+<!-- ============== WRITEUP (rubric requirement) ============== -->
 <section class="writeup" id="writeup">
   <div class="writeup-inner">
-    <h2>Design Rationale & Process</h2>
+    <h2>Project Prototype Writeup</h2>
 
     <article class="writeup-block">
-      <h3>The question</h3>
+      <h3>What we've done so far</h3>
       <p>
-        Our visualization focuses on one main question: when do different parts 
-        of the world cross major warming thresholds? Instead of only showing a 
-        single global average, we wanted viewers to see that climate change is 
-        spatially uneven. Some regions pass 2°C much earlier than others, and 
-        the difference between scenarios changes the timing of those crossings. 
+        We took our Project 3 dashboard and restructured it into a scroll-driven
+        explorable explanation around a single thesis: <em>2°C is not one global
+        deadline — it is many local deadlines</em>. The page now opens with a
+        narrative hero, then walks the reader through five guided steps before
+        unlocking a fully interactive explore mode at the bottom. Each step is
+        driven by an IntersectionObserver that updates the visualization state
+        and swaps the visible chart in the sticky viz panel on the right.
+      </p>
+      <p>
+        We built two new visualizations the original dashboard didn't have. The
+        <b>years-gained mitigation map</b> shows, per grid cell, how much later
+        a region crosses the threshold under SSP1-2.6 versus SSP5-8.5. The
+        <b>regional race chart</b> sorts ten named regions by the year they
+        cross the selected threshold, making the inequality between Arctic,
+        tropics, and Antarctic immediately legible. We also extended the cell
+        time series chart so that selecting a location overlays the global mean
+        line, giving an at-a-glance local-vs-global comparison.
       </p>
     </article>
 
     <article class="writeup-block">
-      <h3>Visual Encoding</h3>
+      <h3>What will be most challenging to design — and why</h3>
       <p>
-        We chose a <b>world choropleth map</b> as the central view because our data is geographic. 
-        The position on the map represents location, while color represents either the first 
-        year a grid cell crosses the selected warming threshold or the temperature anomaly 
-        in a selected year. This makes the main pattern easy to read such as the regions that warm 
-        earlier or more intensely stand out immediately.
+        The hardest design problem is pacing — making the scroll feel like an
+        article instead of a series of dashboard states. Each step needs enough
+        text to land a point but not so much that the reader stops engaging
+        with the visualization. We are still tuning how aggressively the
+        controls reveal themselves: too early and the page feels like the old
+        dashboard, too late and the reader cannot test the claim being made.
       </p>
       <p>
-        After receiving feedback that our earlier color scale made most of the map look like 
-        similar shades of orange/red, we revised the color encoding and switched to a 
-        more noticeable color scheme and used binned color categories instead of using the 
-        continuous color differences. This makes it easier to distinguish between regions 
-        that cross a threshold early, later, or not within the shown time range. The bins also 
-        help the legend communicate the data more clearly because viewers can compare categories 
-        without needing to interpret very subtle color gradients.
-      </p>
-      <p>
-        Based on our feedback of focusing on a smaller region or country to reduce visual clutter, we 
-        decided to <b>keep</b> the full globe because the central point of the project is global unevenness. 
-        A regional view would make local details easier to see, but it would weaken the comparison 
-        across the Arctic, tropics, and oceans. To address the concern without losing the 
-        global framing, we kept the world map as the main view and added region specific interactions 
-        that let users inspect specific places or choose specific regions for closer comparison.
-      </p>
-    </article>
-
-    <article class="writeup-block">
-      <h3>Interaction</h3>
-      <p>
-        The main interactions we have are scenario selection, threshold selection, map mode selection, 
-        hover tooltips, click-to-inspect, region chips, and a year scrubber. We chose these interactions 
-        because they support the main comparison questions: how does the map change across emissions 
-        scenarios, how does the answer change for 1.5°C versus 2°C or higher thresholds, and what does 
-        the warming curve look like for a specific place?
-      </p>
-      <p>
-        More specifically, click-to-inspect on the map opens a per-grid-cell time series so the user can 
-        see the actual warming curve for any spot — Arctic Russia, the Sahel, central Brazil. Hover gives 
-        details on demand without committing to a click. A year scrubber animates the anomaly map for users 
-        who want a "play" view of warming spreading across the globe.
-      </p>
-    </article>
-
-    <article class="writeup-block">
-      <h3>Data Transformations</h3>
-      <p>
-        The CMIP6 CESM2 monthly near-surface air temperature ('tas') field is converted from Kelvin to Celsius, 
-        averaged annually, and expressed as anomalies relative to the 2015–2034 baseline. Per grid cell we compute 
-        the first year the anomaly equals or exceeds each threshold; cells that never cross within 2015–2100 are
-        rendered as "never". Global and regional means are area-weighted by cos(latitude). The grid is 72×144 (~2.5°), 
-        down from CESM2's native resolution to keep the page fast.
-      </p>
-    </article>
-
-    <article class="writeup-block">
-      <h3>Process</h3>
-      <p>
-        Our team split the work by task. YangYang focused on loading the data into a simple html file for all of us to build on it to 
-        create our total of 6 visualizations. We each did our own data cleaning and transformation to make our 3-4 visualizations per person 
-        and then we chose the top 6 visualizations that helped us develop our dynamic visualization. YangYang and Rocio created seperate demos
-        to test out our d3 visualization and then we merged our ideas to the final website seen today.  Hoang implemented the writeup on the final 
-        website and then Rocio updated it to represent the team's accomplishments.
-
-        We spent roughly 15-20 people-hours developing the application. The most time-consuming parts were preparing the climate data into a 
-        browser-friendly format, getting the map and charts to update together smoothly, and revising the color scale after feedback. 
-        The linked interactions were also challenging because changing one control needed to update multiple views without making the page 
-        feel slow or inconsistent.
-      </p>
-    </article>
-
-    <article class="writeup-block">
-      <h3>Limitations</h3>
-      <p>
-        The Mercator Map was used as our primary map visual to represent the 
-        changes in temperature on the globe. This map has its limitations where
-        the area ratios of countries are significantly distorted towards the poles. 
-        This leads to countries at higher latitudes appearing much larger on the map 
-        than they actually are. This matters for climate data because polar regions 
-        appear visually larger than they are, which can make high- latitude warming 
-        look more dominant on the map. We tried to reduce this issue by using area-weighted 
-        global and regional summaries in the charts, so the statistics are not based on the 
-        distorted visual area of the map. The use of the Mercator Map was a design choice to provide 
-        a familiar and widely recognized representation of the world, but it's important to 
-        acknowledge its limitations in accurately representing the world.
-      </p>
-      <p>
-        Another limitation is that a global map can still feel visually dense, especially when many 
-        regions cross thresholds around similar years. Our updated binned color scheme improves 
-        readability, but it also simplifies the data by grouping nearby years together. We chose this 
-        tradeoff because the purpose of the map is to communicate broad timing patterns clearly, while 
-        the tooltip and selected-region time series provide more detailed values when the viewer wants them.
+        Annotations are the second hard problem. Calling out Arctic
+        amplification or the tropical belt on the map means drawing labels and
+        leader lines that survive across screen sizes and stay legible against
+        a busy choropleth. We are still deciding whether to use static SVG
+        annotations baked into the map, or animated annotations that fade in
+        per scroll step. The mitigation map's diverging color scale is another
+        challenge — encoding "years gained" alongside the categories "never
+        crosses either" and "crosses under both" without overloading the
+        legend is harder than it looked in the proposal.
       </p>
     </article>
   </div>
 </section>
 
 <footer class="page-foot">
-  <span>DSC 106 · Project 3 · 2026</span>
+  <span>DSC 106 · Final Project Prototype · 2026</span>
   <span>Data: CMIP6 (CESM2) via Google Cloud Public Datasets</span>
 </footer>
 
