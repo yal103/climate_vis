@@ -1024,7 +1024,7 @@ const cellChartModule = (() => {
         .text(`global: ${globalCross}`);
     }
   }
-  return { init, update };
+  return { init, update, rebuild: build };
 })();
 
 // =========================================================
@@ -1073,7 +1073,7 @@ const scrollEngine = (() => {
     2: { scenario: "ssp245", threshold: "2.0", mode: "crossing", panel: "map" },
     3: {                      threshold: "2.0",                        panel: "mitigation" },
     4: { scenario: "ssp585", threshold: "2.0",                        panel: "race" },
-    5: {                                                              panel: "map" },
+    5: { scenario: "ssp585", threshold: "2.0",                        panel: "comparison" },
   };
 
   function init() {
@@ -1134,6 +1134,7 @@ const scrollEngine = (() => {
       if (targetPanel === "mitigation" && mitigationMapModule.rebuild) mitigationMapModule.rebuild();
       if (targetPanel === "race" && raceChartModule.rebuild) raceChartModule.rebuild();
       if (targetPanel === "map" && mainMap && mainMap.build) mainMap.build();
+      if (targetPanel === "comparison" && cellChartModule.rebuild) cellChartModule.rebuild();
       render();
     });
   }

@@ -890,10 +890,19 @@ button { font-family: inherit; }
 }
 .viz-panel #map,
 .viz-panel #mitigation-map,
-.viz-panel #race-chart {
+.viz-panel #race-chart,
+.viz-panel #cell-chart {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.viz-panel[data-panel="comparison"] #cell-chart {
+  flex: 1;
+  min-height: 0;
+}
+.viz-panel[data-panel="comparison"] .region-chips {
+  margin-bottom: 12px;
 }
 
 /* =========================================================
@@ -903,6 +912,30 @@ button { font-family: inherit; }
   padding: 64px 32px;
   border-top: 1px solid var(--line);
   background: var(--bg-soft);
+}
+.explore-header {
+  max-width: 1480px;
+  margin: 0 auto 32px;
+}
+.explore-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 16px 0 12px;
+  color: var(--ink);
+}
+.explore-sub {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 760px;
+  margin: 0;
+}
+.explore-hint-card {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
 }
 .explore-controls {
   max-width: 1480px;

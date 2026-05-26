@@ -135,15 +135,15 @@
 
     <section class="story-step" data-step="5">
       <div class="step-card">
-        <h2 class="step-title">How does <em>your</em> place compare?</h2>
+        <h2 class="step-title">How does <em>your</em> region compare to the world?</h2>
         <p>
-          Pick a location on the map. The chart on the right overlays your
-          local warming curve against the global average — so you can see
-          whether your region crosses the threshold earlier or later than the
-          world as a whole. Then change scenario and threshold to see how much
-          of the timing is up to us.
+          Pick a region from the chips on the right. The orange line is that
+          region's warming trajectory under SSP5-8.5; the dashed gray line is
+          the global average for the same scenario. The gap between them is
+          how much earlier — or later — that region crosses each warming line
+          compared to the planet as a whole.
         </p>
-        <p class="step-prompt">All controls are unlocked below — explore.</p>
+        <p class="step-prompt">Try the Arctic, then the Antarctic — the difference is decades.</p>
       </div>
     </section>
 
@@ -188,12 +188,36 @@
         <svg id="race-chart" role="img" aria-label="Regional race chart"></svg>
       </div>
 
+      <!-- Comparison: cell chart with global overlay (step 5) -->
+      <div class="viz-panel" data-panel="comparison" hidden>
+        <div class="panel-head">
+          <h3 class="panel-title" id="cell-title">Pick a region to compare</h3>
+          <p class="panel-sub" id="cell-sub">Local warming vs. the global average for the selected scenario.</p>
+        </div>
+        <div class="region-chips" id="region-chips"></div>
+        <svg id="cell-chart" class="side-chart" aria-label="Local vs global comparison"></svg>
+      </div>
+
     </div>
   </div>
 </div>
 
-<!-- ============== EXPLORE SECTION (step 5 full viz) ============== -->
+<!-- ============== EXPLORE SECTION (sandbox) ============== -->
 <section class="explore" id="explore">
+  <div class="explore-header">
+    <div class="kicker">
+      <span class="kicker-dot"></span>
+      <span>Sandbox · play with every dimension</span>
+    </div>
+    <h2 class="explore-title">Now try every scenario, every threshold, every year.</h2>
+    <p class="explore-sub">
+      The guided story locked the scenario or threshold at each step to make a point.
+      Here, nothing is locked. Scrub through years to watch the warming field
+      spread, switch between mitigation pathways, and compare what each choice
+      buys for the planet.
+    </p>
+  </div>
+
   <div class="explore-controls">
     <div class="control-group">
       <div class="control-label">Scenario</div>
@@ -261,18 +285,16 @@
     <aside class="explore-side">
       <section class="card">
         <header class="card-head compact">
-          <h3 class="card-title" id="cell-title">Click a region on the map</h3>
-          <p class="card-sub" id="cell-sub">Local vs. global comparison appears here.</p>
-        </header>
-        <div class="region-chips" id="region-chips"></div>
-        <svg id="cell-chart" class="side-chart"></svg>
-      </section>
-      <section class="card">
-        <header class="card-head compact">
           <h3 class="card-title">Global temperature trajectory</h3>
           <p class="card-sub">Area-weighted global-mean anomaly · all scenarios</p>
         </header>
         <svg id="global-chart" class="side-chart"></svg>
+      </section>
+      <section class="card explore-hint-card">
+        <header class="card-head compact">
+          <h3 class="card-title">Want to compare your region?</h3>
+          <p class="card-sub">Scroll back up to <a href="#scrolly">section 5</a> for the local-vs-global comparison view.</p>
+        </header>
       </section>
     </aside>
   </div>
