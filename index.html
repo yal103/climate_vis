@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>When the world crosses 2°C — CMIP6 threshold explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============== HERO ============== -->
+<header class="hero">
+  <div class="hero-grain"></div>
+  <div class="hero-inner">
+    <div class="kicker">
+      <span class="kicker-dot"></span>
+      <span>CMIP6 · CESM2 · scenario projections 2015–2100</span>
+    </div>
+    <h1>
+      When does the<br>world cross<br>
+      <span class="hero-num" id="hero-threshold">2°C</span>?
+    </h1>
+    <h2>
+      By YangYang, Rocio, & Hoang
+    </h2>
+    <p class="hero-sub">
+      Global warming isn't uniform. The Arctic heats up four times faster than the
+      tropics; continents outpace oceans; and under different emissions scenarios,
+      regions cross dangerous warming thresholds decades apart. Click anywhere on
+      the map to see when warming arrives there and how much depends on what
+      humans choose to do.
+    </p>
+  </div>
+</header>
+
+<!-- ============== CONTROLS ============== -->
+<section class="controls" id="controls">
+  <div class="controls-row">
+    <!-- Scenario tabs -->
+    <div class="control-group">
+      <div class="control-label">Emissions scenario</div>
+      <div class="seg-control" id="scenario-control" role="tablist" aria-label="Emissions scenario">
+        <button class="seg-btn" data-value="ssp126" role="tab">
+          <span class="seg-name">SSP1-2.6</span>
+          <span class="seg-desc">Strong mitigation</span>
+        </button>
+        <button class="seg-btn" data-value="ssp245" role="tab">
+          <span class="seg-name">SSP2-4.5</span>
+          <span class="seg-desc">Middle of the road</span>
+        </button>
+        <button class="seg-btn active" data-value="ssp585" role="tab">
+          <span class="seg-name">SSP5-8.5</span>
+          <span class="seg-desc">Fossil-fueled</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Threshold slider -->
+    <div class="control-group">
+      <div class="control-label">Warming threshold</div>
+      <div class="seg-control" id="threshold-control" role="tablist" aria-label="Warming threshold">
+        <button class="seg-btn" data-value="1.5">
+          <span class="seg-name">1.5°C</span>
+          <span class="seg-desc">Paris goal</span>
+        </button>
+        <button class="seg-btn active" data-value="2.0">
+          <span class="seg-name">2°C</span>
+          <span class="seg-desc">Paris ceiling</span>
+        </button>
+        <button class="seg-btn" data-value="3.0">
+          <span class="seg-name">3°C</span>
+          <span class="seg-desc">Severe</span>
+        </button>
+        <button class="seg-btn" data-value="4.0">
+          <span class="seg-name">4°C</span>
+          <span class="seg-desc">Catastrophic</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- View mode -->
+    <div class="control-group">
+      <div class="control-label">Map shows</div>
+      <div class="seg-control" id="mode-control">
+        <button class="seg-btn active" data-value="crossing">
+          <span class="seg-name">First crossing year</span>
+        </button>
+        <button class="seg-btn" data-value="anomaly">
+          <span class="seg-name">Anomaly in</span>
+          <span class="seg-desc"><span id="year-readout">2050</span></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Year scrubber (visible only in 'anomaly' mode) -->
+  <div class="year-scrubber" id="year-scrubber" hidden>
+    <div class="scrubber-row">
+      <button id="play-btn" class="play-btn" aria-label="Play">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path id="play-icon" d="M8 5v14l11-7z" fill="currentColor"/></svg>
+      </button>
+      <div class="scrubber-stack">
+        <input type="range" id="year-slider" min="2015" max="2100" step="1" value="2050" />
+        <div class="scrubber-ticks">
+          <span>2015</span>
+          <span>2040</span>
+          <span>2060</span>
+          <span>2080</span>
+          <span>2100</span>
+        </div>
+      </div>
+      <div class="year-tick" id="year-tick">2050</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== MAIN VIZ ============== -->
+<main class="viz-grid">
+
+  <!-- Map -->
+  <section class="card map-card">
+    <header class="card-head">
+      <div>
+        <h2 class="card-title" id="map-title">First year each region crosses +2°C</h2>
+        <p class="card-sub" id="map-sub">Under SSP5-8.5 · relative to 2015–2034 baseline · click a cell to inspect</p>
+      </div>
+      <div class="map-legend" id="map-legend">
+        <!-- filled by JS -->
+      </div>
+    </header>
+    <div class="map-wrap">
+      <svg id="map" role="img" aria-label="World map of warming threshold crossing years"></svg>
+      <div class="tooltip" id="tooltip" role="tooltip"></div>
+      <div class="map-overlay-msg" id="map-loading">Loading climate data…</div>
+    </div>
+    <footer class="card-foot">
+      <div class="foot-stat">
+        <span class="foot-num" id="stat-pct-crossed">—</span>
+        <span class="foot-lbl">of land area crosses by 2100</span>
+      </div>
+      <div class="foot-stat">
+        <span class="foot-num" id="stat-median-year">—</span>
+        <span class="foot-lbl">median crossing year</span>
+      </div>
+      <div class="foot-stat">
+        <span class="foot-num" id="stat-first-region">—</span>
+        <span class="foot-lbl">first region to cross</span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- Right column: global means + cell ts + histogram -->
+  <aside class="side-col">
+
+    <!-- Global means line chart -->
+    <section class="card">
+      <header class="card-head compact">
+        <div>
+          <h3 class="card-title">Global temperature trajectory</h3>
+          <p class="card-sub">Area-weighted global-mean anomaly · all scenarios</p>
+        </div>
+      </header>
+      <svg id="global-chart" class="side-chart"></svg>
+    </section>
+
+    <!-- Cell time series -->
+    <section class="card" id="cell-card">
+      <header class="card-head compact">
+        <div>
+          <h3 class="card-title" id="cell-title">Click a region on the map</h3>
+          <p class="card-sub" id="cell-sub">Or pick one below to compare regional warming.</p>
+        </div>
+      </header>
+      <div class="region-chips" id="region-chips">
+        <!-- filled by JS -->
+      </div>
+      <svg id="cell-chart" class="side-chart"></svg>
+    </section>
+
+    <!-- Histogram -->
+    <section class="card">
+      <header class="card-head compact">
+        <div>
+          <h3 class="card-title">Distribution of crossing years</h3>
+          <p class="card-sub">Across all grid cells · current scenario & threshold</p>
+        </div>
+      </header>
+      <svg id="histogram" class="side-chart"></svg>
+    </section>
+
+  </aside>
+</main>
+
+<!-- ============== WRITEUP ============== -->
+<section class="writeup" id="writeup">
+  <div class="writeup-inner">
+    <h2>Design Rationale & Process</h2>
+
+    <article class="writeup-block">
+      <h3>The question</h3>
+      <p>
+        Our visualization focuses on one main question: when do different parts 
+        of the world cross major warming thresholds? Instead of only showing a 
+        single global average, we wanted viewers to see that climate change is 
+        spatially uneven. Some regions pass 2°C much earlier than others, and 
+        the difference between scenarios changes the timing of those crossings. 
+      </p>
+    </article>
+
+    <article class="writeup-block">
+      <h3>Visual Encoding</h3>
+      <p>
+        We chose a <b>world choropleth map</b> as the central view because our data is geographic. 
+        The position on the map represents location, while color represents either the first 
+        year a grid cell crosses the selected warming threshold or the temperature anomaly 
+        in a selected year. This makes the main pattern easy to read such as the regions that warm 
+        earlier or more intensely stand out immediately.
+      </p>
+      <p>
+        After receiving feedback that our earlier color scale made most of the map look like 
+        similar shades of orange/red, we revised the color encoding and switched to a 
+        more noticeable color scheme and used binned color categories instead of using the 
+        continuous color differences. This makes it easier to distinguish between regions 
+        that cross a threshold early, later, or not within the shown time range. The bins also 
+        help the legend communicate the data more clearly because viewers can compare categories 
+        without needing to interpret very subtle color gradients.
+      </p>
+      <p>
+        Based on our feedback of focusing on a smaller region or country to reduce visual clutter, we 
+        decided to <b>keep</b> the full globe because the central point of the project is global unevenness. 
+        A regional view would make local details easier to see, but it would weaken the comparison 
+        across the Arctic, tropics, and oceans. To address the concern without losing the 
+        global framing, we kept the world map as the main view and added region specific interactions 
+        that let users inspect specific places or choose specific regions for closer comparison.
+      </p>
+    </article>
+
+    <article class="writeup-block">
+      <h3>Interaction</h3>
+      <p>
+        The main interactions we have are scenario selection, threshold selection, map mode selection, 
+        hover tooltips, click-to-inspect, region chips, and a year scrubber. We chose these interactions 
+        because they support the main comparison questions: how does the map change across emissions 
+        scenarios, how does the answer change for 1.5°C versus 2°C or higher thresholds, and what does 
+        the warming curve look like for a specific place?
+      </p>
+      <p>
+        More specifically, click-to-inspect on the map opens a per-grid-cell time series so the user can 
+        see the actual warming curve for any spot — Arctic Russia, the Sahel, central Brazil. Hover gives 
+        details on demand without committing to a click. A year scrubber animates the anomaly map for users 
+        who want a "play" view of warming spreading across the globe.
+      </p>
+    </article>
+
+    <article class="writeup-block">
+      <h3>Data Transformations</h3>
+      <p>
+        The CMIP6 CESM2 monthly near-surface air temperature ('tas') field is converted from Kelvin to Celsius, 
+        averaged annually, and expressed as anomalies relative to the 2015–2034 baseline. Per grid cell we compute 
+        the first year the anomaly equals or exceeds each threshold; cells that never cross within 2015–2100 are
+        rendered as "never". Global and regional means are area-weighted by cos(latitude). The grid is 72×144 (~2.5°), 
+        down from CESM2's native resolution to keep the page fast.
+      </p>
+    </article>
+
+    <article class="writeup-block">
+      <h3>Process</h3>
+      <p>
+        Our team split the work by task. YangYang focused on loading the data into a simple html file for all of us to build on it to 
+        create our total of 6 visualizations. We each did our own data cleaning and transformation to make our 3-4 visualizations per person 
+        and then we chose the top 6 visualizations that helped us develop our dynamic visualization. YangYang and Rocio created seperate demos
+        to test out our d3 visualization and then we merged our ideas to the final website seen today.  Hoang implemented the writeup on the final 
+        website and then Rocio updated it to represent the team's accomplishments.
+
+        We spent roughly 15-20 people-hours developing the application. The most time-consuming parts were preparing the climate data into a 
+        browser-friendly format, getting the map and charts to update together smoothly, and revising the color scale after feedback. 
+        The linked interactions were also challenging because changing one control needed to update multiple views without making the page 
+        feel slow or inconsistent.
+      </p>
+    </article>
+
+    <article class="writeup-block">
+      <h3>Limitations</h3>
+      <p>
+        The Mercator Map was used as our primary map visual to represent the 
+        changes in temperature on the globe. This map has its limitations where
+        the area ratios of countries are significantly distorted towards the poles. 
+        This leads to countries at higher latitudes appearing much larger on the map 
+        than they actually are. This matters for climate data because polar regions 
+        appear visually larger than they are, which can make high- latitude warming 
+        look more dominant on the map. We tried to reduce this issue by using area-weighted 
+        global and regional summaries in the charts, so the statistics are not based on the 
+        distorted visual area of the map. The use of the Mercator Map was a design choice to provide 
+        a familiar and widely recognized representation of the world, but it's important to 
+        acknowledge its limitations in accurately representing the world.
+      </p>
+      <p>
+        Another limitation is that a global map can still feel visually dense, especially when many 
+        regions cross thresholds around similar years. Our updated binned color scheme improves 
+        readability, but it also simplifies the data by grouping nearby years together. We chose this 
+        tradeoff because the purpose of the map is to communicate broad timing patterns clearly, while 
+        the tooltip and selected-region time series provide more detailed values when the viewer wants them.
+      </p>
+    </article>
+  </div>
+</section>
+
+<footer class="page-foot">
+  <span>DSC 106 · Project 3 · 2026</span>
+  <span>Data: CMIP6 (CESM2) via Google Cloud Public Datasets</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
