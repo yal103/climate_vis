@@ -712,3 +712,498 @@ button { font-family: inherit; }
   flex-wrap: wrap;
   gap: 12px;
 }
+
+/* =========================================================
+   SCROLLYTELLING
+   ========================================================= */
+.hero-scroll-hint {
+  margin-top: 56px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.hero-arrow {
+  display: inline-block;
+  animation: bob 1.8s ease-in-out infinite;
+  color: var(--accent-2);
+  font-size: 14px;
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
+
+.scrolly {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.scroll-graphic {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.viz-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 24px 32px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: opacity 0.55s ease, transform 0.55s ease, visibility 0s 0.55s;
+  pointer-events: none;
+}
+.viz-panel.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: opacity 0.55s ease, transform 0.55s ease, visibility 0s 0s;
+}
+
+.full-svg {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: block;
+}
+
+.viz-meta {
+  position: absolute;
+  top: 18px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  z-index: 2;
+}
+.viz-label { color: var(--ink-soft); }
+
+.viz-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  padding: 8px 4px 0;
+  align-items: center;
+}
+.caption-key {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.scroll-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: var(--bg-soft);
+  z-index: 10;
+  transition: opacity 0.4s;
+}
+.scroll-loading.hidden { opacity: 0; pointer-events: none; }
+
+/* Scroll steps */
+.scroll-steps {
+  padding: 50vh 0 50vh;
+}
+
+.step {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px 8px 80px 36px;
+  opacity: 0.35;
+  transition: opacity 0.4s ease;
+}
+.step.is-active { opacity: 1; }
+
+.step-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  margin: 0 0 16px;
+}
+
+.step h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: italic;
+  font-size: clamp(28px, 3.4vw, 44px);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  margin: 0 0 18px;
+  color: var(--ink);
+}
+
+.step p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+  max-width: 38ch;
+}
+
+.step em {
+  font-style: italic;
+  color: var(--ink);
+}
+
+/* mobile collapse */
+@media (max-width: 900px) {
+  .scrolly {
+    grid-template-columns: 1fr;
+  }
+  .scroll-graphic {
+    height: 70vh;
+    top: 60px;
+  }
+  .scroll-steps { padding: 30vh 0 30vh; }
+  .step { padding: 32px 8px; min-height: 60vh; }
+  .viz-panel { padding: 48px 12px 16px; }
+}
+
+/* =========================================================
+   STRIPES VIZ
+   ========================================================= */
+.stripe-rect { shape-rendering: crispEdges; }
+.stripe-row-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  fill: var(--ink-soft);
+}
+.stripe-row-label.dim { fill: var(--ink-faint); }
+.stripe-axis text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-faint);
+}
+.stripe-axis line { stroke: var(--line); }
+.stripe-axis path { display: none; }
+.stripe-divider-line {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.stripe-divider-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+/* =========================================================
+   RIDGE PLOT
+   ========================================================= */
+.ridge-path {
+  fill-opacity: 0.7;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  transition: fill-opacity 0.2s;
+}
+.ridge-path:hover { fill-opacity: 0.95; }
+.ridge-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  fill: var(--ink);
+}
+.ridge-sublabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  fill: var(--ink-faint);
+}
+.ridge-axis text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-faint);
+}
+.ridge-axis line { stroke: var(--line); }
+.ridge-axis path { display: none; }
+
+/* =========================================================
+   BEESWARM
+   ========================================================= */
+.bee-dot {
+  stroke: rgba(0,0,0,0.35);
+  stroke-width: 0.4;
+  transition: stroke 0.15s;
+}
+.bee-dot:hover {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.bee-axis text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-faint);
+}
+.bee-axis line { stroke: var(--line); }
+.bee-axis path { display: none; }
+.bee-never-divider {
+  stroke: var(--ink-faint);
+  stroke-dasharray: 3 4;
+  opacity: 0.6;
+}
+.bee-never-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+/* =========================================================
+   FAN CHART
+   ========================================================= */
+.fan-area-126 { fill: var(--good); fill-opacity: 0.55; }
+.fan-area-245 { fill: var(--accent-2); fill-opacity: 0.45; }
+.fan-area-585 { fill: var(--bad); fill-opacity: 0.4; }
+.fan-line {
+  fill: none;
+  stroke-width: 2;
+}
+.fan-line-126 { stroke: var(--good); }
+.fan-line-245 { stroke: var(--accent-2); }
+.fan-line-585 { stroke: var(--bad); }
+
+.fan-axis text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-faint);
+}
+.fan-axis line { stroke: var(--line); }
+.fan-axis path { display: none; }
+
+.fan-scenario-label {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.fan-divergence-anno {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  fill: var(--ink);
+}
+
+/* =========================================================
+   LIFETIME TIMELINE
+   ========================================================= */
+.lifetime-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 0 8px 6px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+.lifetime-controls label {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink);
+}
+#birth-year-input {
+  width: 92px;
+  background: var(--bg-card);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  padding: 8px 12px;
+  border-radius: 6px;
+  outline: none;
+  text-align: center;
+}
+#birth-year-input:focus { border-color: var(--accent); }
+
+.lifetime-scenario-toggle {
+  display: inline-flex;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px;
+  gap: 2px;
+  margin-left: auto;
+}
+.seg-btn-mini {
+  background: transparent;
+  border: 0;
+  color: var(--ink-soft);
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  transition: background 0.15s, color 0.15s;
+}
+.seg-btn-mini:hover { color: var(--ink); }
+.seg-btn-mini.active {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.life-track-fill {
+  fill: url(#life-gradient);
+}
+.life-track-bg {
+  fill: rgba(255, 255, 255, 0.04);
+}
+.life-axis text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-faint);
+}
+.life-axis line { stroke: var(--line); }
+.life-axis path { display: none; }
+.life-milestone-line {
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.life-milestone-dot {
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+.life-milestone-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.life-age-text {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 20px;
+  fill: var(--ink);
+}
+.life-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+.life-birth-label, .life-end-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  fill: var(--ink);
+}
+
+/* =========================================================
+   FINALE DIVIDER
+   ========================================================= */
+.finale-divider {
+  padding: 80px 32px 30px;
+  border-top: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 92, 43, 0.10), transparent 60%),
+    var(--bg);
+}
+.finale-divider-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+.finale-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+.finale-divider h2 {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(34px, 5vw, 56px);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 12px 0 0;
+}
+
+/* Scrolly map */
+#scroll-map {
+  width: 100%;
+  height: 100%;
+}
+#scroll-map-legend {
+  margin-top: 8px;
+}
+.scroll-map-annotation {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  fill: var(--ink);
+}
+.scroll-map-anno-bg {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  fill: var(--bg);
+  stroke: var(--bg);
+  stroke-width: 4;
+  paint-order: stroke fill;
+}
+.scroll-map-anno-line {
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  fill: none;
+  opacity: 0.85;
+}
+.scroll-map-anno-circle {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 3;
+}
