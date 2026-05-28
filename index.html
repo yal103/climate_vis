@@ -375,51 +375,44 @@
     <article class="writeup-block">
       <h3>What we've done so far</h3>
       <p>
-        We've transformed our Project 3 climate dashboard into an explorable explanation
-        organized as a six-act scrollytelling narrative titled <em>A World on Fire</em>.
-        The story moves through five novel, non-map visualizations — warming stripes
-        of the global temperature trajectory, an annotated world map, a ridge plot of
-        crossing-year distributions across seven latitude bands, a force-packed beeswarm
-        of every grid cell, and a fan chart of scenario divergence — before delivering
-        the reader into a personalized lifetime timeline they can drive with their own
-        birth year.
+        We took our Project 3 dashboard and rebuilt it from scratch as a scroll-driven
+        story called <em>A World on Fire</em>. Instead of dumping everything on one
+        page, the reader now scrolls through six acts, each with a different chart:
+        warming stripes, an annotated world map, a ridge plot showing when different
+        latitudes cross +2°C, a beeswarm where every dot is a grid cell, a fan chart
+        of how the three SSP scenarios split apart, and finally a timeline you can
+        personalize with your own birth year. We wanted at least half the visuals to
+        be something other than a map, so the ridge plot and beeswarm were new territory
+        for us.
       </p>
       <p>
-        Underneath, we built five new D3 modules (stripes, ridge, beeswarm, fan,
-        lifetime) and wired them to a Scrollama controller that swaps the visible
-        visualization as the reader scrolls past each text step. The full interactive
-        dashboard from Project 3 — choropleth map, global trajectory, region chips,
-        histogram, year scrubber — survives intact as the finale, so readers can
-        explore the data themselves once the story has finished. All visualizations
-        draw from the same CMIP6 CESM2 dataset we cleaned and downsampled in
-        <code>project-3.ipynb</code>, including <code>global_means.json</code>,
-        <code>regional_means.json</code>, and the per-cell <code>crossings.json</code>.
+        On the code side, each visualization is its own D3 module, and we use Scrollama
+        to detect which text block the reader is on and swap the active chart accordingly.
+        The original Project 3 dashboard (map, line charts, histogram, year scrubber)
+        still lives at the bottom so people can poke around after the narrative ends.
+        Everything pulls from the same CMIP6 CESM2 data we processed in
+        <code>project-3.ipynb</code>, so no new datasets were needed.
       </p>
     </article>
 
     <article class="writeup-block">
       <h3>What will be the most challenging part</h3>
       <p>
-        The hardest design problem ahead is keeping the scrollytelling coherent
-        across radically different visualization types. Each act introduces a new
-        encoding — stripes use color along a year axis, the ridge plot uses
-        kernel density per latitude, the beeswarm dissolves geography entirely
-        into position, the lifetime timeline reframes the same data around a
-        personal anchor. Making these feel like one narrative rather than six
-        unrelated charts demands careful color consistency, smooth transitions
-        between panels, and prose that earns each visual switch.
+        Honestly, the biggest challenge is making six totally different chart types feel
+        like they belong together. Going from color-coded stripes to a density ridge plot
+        to a force-layout beeswarm is a lot of context-switching for the reader. We're
+        relying on a shared color palette across latitude bands and careful narration
+        text to tie everything together, but it's tricky to get right and we're still
+        tweaking the transitions between panels.
       </p>
       <p>
-        The second hard problem is the beeswarm performance. With ~6,144 grid
-        cells and a d3-force collision simulation, the layout has to settle
-        offline (no live ticking) and render in under a second on first paint
-        — and re-settle whenever the scenario changes — without freezing the
-        page. We also need the lifetime timeline to feel emotionally direct:
-        getting the right milestones, age annotations, and scenario contrast on
-        a single horizontal axis without crowding the canvas will take iteration.
-        Finally, the entire experience has to remain readable on mobile, which
-        means our sticky two-column layout collapses gracefully and our SVGs
-        re-fit their containers on resize.
+        The beeswarm is also a real performance headache. There are about 6,000 dots and
+        we run a d3-force collision simulation to lay them out, so we had to pre-settle
+        it off-screen (140 ticks before painting anything) to avoid locking up the browser.
+        It still has to re-run whenever you switch scenarios. Beyond that, the lifetime
+        timeline at the end needs to land emotionally without being cluttered, and the
+        whole thing has to work on phones where our two-column sticky layout has to
+        collapse into a single column. Lots of small problems that add up.
       </p>
     </article>
   </div>
