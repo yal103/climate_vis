@@ -2442,6 +2442,20 @@ const beeswarmModule = (() => {
     // ---- Year scrubber: drag to light up the planet as it crosses +2°C ----
     const total = nodes.length;
     const scrubG = g.append("g");
+
+    // A single solid "veil" rect washes out the dots to the RIGHT of the scrub
+    // line — uniformly transparent across the whole right side. This is the
+    // cheap way to fade thousands of dots: as you pan we only move/resize one
+    // rect, never touch the dots themselves.
+    const veil = scrubG
+      .append("rect")
+      .attr("class", "bee-right-veil")
+      .attr("y", m.top - 4)
+      .attr("height", height - m.bottom - (m.top - 4))
+      .attr("fill", "#0e0d0c")
+      .style("pointer-events", "none")
+      .style("opacity", 0);
+
     const scrubLine = scrubG
       .append("line")
       .attr("class", "bee-scrub-line")
@@ -2502,6 +2516,12 @@ const beeswarmModule = (() => {
 
       const pct = Math.round((b / total) * 100);
       const px = x(yr);
+      // Move the veil so everything right of the scrub line fades out. Single
+      // attribute write — independent of dot count.
+      veil
+        .attr("x", px)
+        .attr("width", Math.max(0, width - m.right - px))
+        .style("opacity", 0.72);
       scrubLine.attr("x1", px).attr("x2", px).style("opacity", 1);
       scrubLabel.attr("x", px).text(yr).style("opacity", 1);
       readout
@@ -2509,6 +2529,7 @@ const beeswarmModule = (() => {
         .text(`By ${yr}, ${pct}% of Earth has crossed +2°C`);
     }
     function clearScrub() {
+      veil.style("opacity", 0);
       scrubLine.style("opacity", 0);
       scrubLabel.style("opacity", 0);
       readout.style("opacity", 0);
@@ -2568,20 +2589,9 @@ const beeswarmModule = (() => {
   function reveal() {
     if (revealed) return;
     revealed = true;
-    const dots = g.selectAll(".bee-dot");
-    if (prefersReducedMotion()) {
-      dots
-        .attr("r", function () {
-          return +this.getAttribute("data-r");
-        })
-        .style("opacity", 1);
-      return;
-    }
-    dots
-      .transition()
-      .delay((d) => ((d.tx - 2018) / (2108 - 2018)) * 900)
-      .duration(420)
-      .ease(d3.easeCubicOut)
+    // No entrance transition: staggering ~6,000 dots is laggy on the first
+    // scroll into this act, so snap straight to the final state.
+    g.selectAll(".bee-dot")
       .attr("r", function () {
         return +this.getAttribute("data-r");
       })
@@ -3115,9 +3125,9 @@ const lifetimeModule = (() => {
       .filter((d) => d.year != null && d.year >= curveStart && d.year <= xMax)
       .sort((a, b) => a.year - b.year);
     // Two staggered rows so clustered late-century crossings don't overprint.
-    const LABEL_GAP = 92;
+    const LABEL_GAP = 128;
     const rowLastX = [-1e9, -1e9];
-    const rowY = [plotTop + 12, plotTop + 40];
+    const rowY = [plotTop + 8, plotTop + 44];
     milestones.forEach((mi, idx) => {
       const px = x(mi.year);
       const cy = y(valueAt(scen, mi.year));

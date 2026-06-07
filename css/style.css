@@ -266,13 +266,43 @@ button {
 .title-fire {
   font-style: italic;
   font-weight: 600;
-  background: var(--warming-stripe);
+  /* deeper red-orange ember gradient */
+  background: linear-gradient(
+    95deg,
+    #ff7a1a 0%,
+    #ff4d12 35%,
+    #e62200 70%,
+    #b30d00 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   padding-right: 0.11em;
-  /* faint heat bleed around the word */
-  filter: drop-shadow(0 2px 26px rgba(255, 92, 43, 0.28));
+  /* layered glow around the word, pulsating */
+  animation: fire-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes fire-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px rgba(255, 77, 18, 0.4))
+      drop-shadow(0 0 20px rgba(230, 34, 0, 0.32))
+      drop-shadow(0 2px 32px rgba(255, 60, 20, 0.25));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(255, 77, 18, 0.7))
+      drop-shadow(0 0 40px rgba(230, 34, 0, 0.6))
+      drop-shadow(0 2px 56px rgba(255, 60, 20, 0.45));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-fire {
+    animation: none;
+    filter: drop-shadow(0 0 10px rgba(255, 77, 18, 0.55))
+      drop-shadow(0 0 28px rgba(230, 34, 0, 0.45))
+      drop-shadow(0 2px 40px rgba(255, 60, 20, 0.35));
+  }
 }
 
 /* ---- Lead + byline ---- */
