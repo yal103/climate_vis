@@ -1,440 +1,550 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>A World on Fire — CMIP6 climate scrollytelling</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
-</head>
-<body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A World on Fire — CMIP6 climate scrollytelling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- ============== HERO ============== -->
+    <header class="hero">
+      <div class="hero-gridlines" aria-hidden="true"></div>
+      <div class="hero-ember" aria-hidden="true"></div>
+      <div class="hero-grain" aria-hidden="true"></div>
 
-<!-- ============== HERO ============== -->
-<header class="hero">
-  <div class="hero-grain"></div>
-  <div class="hero-inner">
-    <div class="kicker">
-      <span class="kicker-dot"></span>
-      <span>CMIP6 · CESM2 · scenario projections 2015–2100</span>
-    </div>
-    <h1>
-      A world<br>on
-      <span class="hero-num">fire</span>
-    </h1>
-    <h2>
-      By YangYang, Rocio, & Hoang
-    </h2>
-    <p class="hero-sub">
-      Global warming isn't uniform. The Arctic heats up four times faster than the
-      tropics; continents outpace oceans; and under different emissions scenarios,
-      regions cross dangerous warming thresholds decades apart. Scroll to see
-      <em>when</em>, <em>where</em>, and <em>how much</em> — and what choices change it.
-    </p>
-    <div class="hero-actions">
-      <a href="#writeup" class="hero-writeup-btn" id="writeup-jump">
-        <span>Project writeup</span>
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-          <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </a>
-    </div>
-    <div class="hero-scroll-hint">
-      <span>scroll to begin</span>
-      <span class="hero-arrow">↓</span>
-    </div>
-  </div>
-</header>
-
-<!-- ============== SCROLLYTELLING ============== -->
-<section class="scrolly" id="scrolly">
-  <div class="scroll-graphic" id="scroll-graphic">
-    <!-- All scrolly visualizations live here; one is visible at a time. -->
-
-    <!-- Act 1: Warming stripes -->
-    <div class="viz-panel active" data-viz="stripes" id="panel-stripes">
-      <div class="viz-meta">
-        <span class="viz-label">Act I · Global mean temperature, 2015–2100</span>
-      </div>
-      <svg id="stripes-svg" class="full-svg"></svg>
-      <div class="viz-caption" id="stripes-caption">
-        <span class="caption-key" style="background:#1d3a4f"></span>cooler
-        <span class="caption-key" style="background:#5fa8d3"></span>+1°C
-        <span class="caption-key" style="background:#ffaa3d"></span>+3°C
-        <span class="caption-key" style="background:#c2261b"></span>+5°C
-      </div>
-    </div>
-
-    <!-- Act 2: Annotated world map -->
-    <div class="viz-panel" data-viz="map" id="panel-map">
-      <div class="viz-meta">
-        <span class="viz-label">Act II · When each region crosses +2°C · <span id="scroll-map-scenario">SSP5-8.5</span></span>
-      </div>
-      <svg id="scroll-map" class="full-svg"></svg>
-      <div class="viz-caption" id="scroll-map-legend">
-        <!-- filled by JS -->
-      </div>
-    </div>
-
-    <!-- Act 3: Ridge plot -->
-    <div class="viz-panel" data-viz="ridge" id="panel-ridge">
-      <div class="viz-meta">
-        <span class="viz-label">Act III · Crossing-year distribution by latitude · <span id="ridge-scenario-label">SSP5-8.5 · +2°C</span></span>
-      </div>
-      <svg id="ridge-svg" class="full-svg"></svg>
-    </div>
-
-    <!-- Act 4: Beeswarm -->
-    <div class="viz-panel" data-viz="beeswarm" id="panel-beeswarm">
-      <div class="viz-meta">
-        <span class="viz-label">Act IV · Every patch of Earth, plotted by when it crosses +2°C</span>
-      </div>
-      <svg id="beeswarm-svg" class="full-svg"></svg>
-      <div class="viz-caption" id="beeswarm-legend">
-        <!-- filled by JS -->
-      </div>
-    </div>
-
-    <!-- Act 5a: Fan chart -->
-    <div class="viz-panel" data-viz="fan" id="panel-fan">
-      <div class="viz-meta">
-        <span class="viz-label">Act V · The branching futures · global mean anomaly</span>
-      </div>
-      <svg id="fan-svg" class="full-svg"></svg>
-    </div>
-
-    <!-- Act 5b: Lifetime timeline -->
-    <div class="viz-panel" data-viz="lifetime" id="panel-lifetime">
-      <div class="viz-meta">
-        <span class="viz-label">Act V · A lifetime under warming</span>
-      </div>
-      <div class="lifetime-controls">
-        <label for="birth-year-input">I was born in</label>
-        <input type="number" id="birth-year-input" min="1930" max="2025" value="2000" />
-        <div class="lifetime-scenario-toggle" id="lifetime-scenario-toggle">
-          <button class="seg-btn-mini" data-value="ssp126">SSP1-2.6</button>
-          <button class="seg-btn-mini" data-value="ssp245">SSP2-4.5</button>
-          <button class="seg-btn-mini active" data-value="ssp585">SSP5-8.5</button>
+      <div class="hero-inner">
+        <!-- Masthead -->
+        <div class="masthead">
+          <span class="masthead-id">
+            <span class="masthead-stripes" aria-hidden="true"></span>
+            <span class="masthead-name">An interactive climate record</span>
+          </span>
+          <span class="masthead-meta">DSC&nbsp;106 · Spring&nbsp;2026</span>
+          <a href="#writeup" class="masthead-link" id="writeup-jump">
+            Project writeup
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+              <path
+                d="M7 17 17 7M9 7h8v8"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </a>
         </div>
-      </div>
-      <svg id="lifetime-svg" class="full-svg"></svg>
-    </div>
+        <div class="hero-rule"></div>
 
-    <div class="scroll-loading" id="scroll-loading">Loading climate data…</div>
-  </div>
+        <!-- Dateline -->
+        <p class="dateline">
+          <!-- <span>CMIP6 · CESM2 ensemble</span>
+          <span class="dateline-sep" aria-hidden="true">/</span>
+          <span>Scenario projections 2015–2100</span> -->
+        </p>
 
-  <div class="scroll-steps" id="scroll-steps">
+        <!-- Headline -->
+        <h1 class="hero-title">
+          <span class="title-line title-line-1">A&nbsp;world</span>
+          <span class="title-line title-line-2"
+            >on&nbsp;<em class="title-fire">fire</em></span
+          >
+        </h1>
 
-    <div class="step" data-step="stripes">
-      <p class="step-eyebrow">Act I — The acceleration</p>
-      <h3>Every year, warmer than the last.</h3>
-      <p>
-        Each stripe is a single year of projected global temperature. The cooler blues
-        are the recent past; the angry reds are the futures we may inherit. From the
-        top, the world's most ambitious mitigation path. From the bottom, fossil-fueled
-        business as usual. The stripes don't lie — every scenario warms, the question
-        is only how much.
-      </p>
-    </div>
-
-    <div class="step" data-step="map">
-      <p class="step-eyebrow">Act II — The geography</p>
-      <h3>But warming isn't uniform.</h3>
-      <p>
-        Some places will cross +2°C this decade. Others may not see it before 2100.
-        The Arctic is already running ahead — high-latitude land warms two to four
-        times the global average. Meanwhile vast stretches of the Southern Ocean
-        stay cool, buffered by deep waters that absorb the heat we add.
-      </p>
-    </div>
-
-    <div class="step" data-step="ridge">
-      <p class="step-eyebrow">Act III — The latitude divide</p>
-      <h3>The Arctic races. The Southern Ocean stalls.</h3>
-      <p>
-        Each ridge below shows the <em>distribution</em> of crossing years for one
-        latitude band. The Arctic peak crashes in early — most Arctic cells cross
-        +2°C in the 2030s. The tropics are a broader, later wave. And the
-        Southern Ocean barely rises off the floor: most of its area never crosses
-        within this century at all.
-      </p>
-    </div>
-
-    <div class="step" data-step="beeswarm">
-      <p class="step-eyebrow">Act IV — A patch of Earth, a single dot</p>
-      <h3>Six thousand pieces of the planet.</h3>
-      <p>
-        Each dot is one grid cell — one patch of Earth's surface. Their horizontal
-        position is the year they first cross +2°C. The dense red wall on the
-        left is the Arctic. The blue cluster on the far right — beyond the
-        timeline — are the cells that may never see +2°C. Together they tell
-        the same story the map does, but stripped of geography.
-      </p>
-    </div>
-
-    <div class="step" data-step="fan">
-      <p class="step-eyebrow">Act V — The choice ahead</p>
-      <h3>Three futures, branching from now.</h3>
-      <p>
-        Up to today, all three scenarios share the same line. After that, they
-        fan apart — and the gap at 2100 is the difference our choices make. The
-        shaded band between SSP1-2.6 and SSP5-8.5 is the <em>possibility space</em>:
-        nearly 3°C of warming hangs on what humanity does this decade.
-      </p>
-    </div>
-
-    <div class="step" data-step="lifetime">
-      <p class="step-eyebrow">Act V — In a lifetime</p>
-      <h3>What does this mean for you?</h3>
-      <p>
-        Type your birth year above. The timeline charts your life against the
-        warming milestones that will mark it: when the Arctic crosses +2°C, when
-        the world-as-a-whole does, when Europe does. These aren't abstractions —
-        they're events your generation will live through. The scenario you pick
-        changes the timing by decades.
-      </p>
-    </div>
-
-    <div class="step" data-step="finale">
-      <p class="step-eyebrow">Now — Explore</p>
-      <h3>The full picture, in your hands.</h3>
-      <p>
-        Below is the full dataset, interactive. Pick a scenario, a threshold, a
-        place. Click anywhere on the map to see how warming will unfold for that
-        patch of Earth. Compare regions. Scrub through the years. The data is
-        the same — only the lens changes.
-      </p>
-    </div>
-
-  </div>
-</section>
-
-<!-- ============== INTERACTIVE FINALE ============== -->
-<section class="finale-divider">
-  <div class="finale-divider-inner">
-    <span class="finale-eyebrow">Interactive Dashboard</span>
-    <h2>Explore the data yourself.</h2>
-  </div>
-</section>
-
-<section class="controls" id="controls">
-  <div class="controls-row">
-    <!-- Scenario tabs -->
-    <div class="control-group">
-      <div class="control-label">Emissions scenario</div>
-      <div class="seg-control" id="scenario-control" role="tablist" aria-label="Emissions scenario">
-        <button class="seg-btn" data-value="ssp126" role="tab">
-          <span class="seg-name">SSP1-2.6</span>
-          <span class="seg-desc">Strong mitigation</span>
-        </button>
-        <button class="seg-btn" data-value="ssp245" role="tab">
-          <span class="seg-name">SSP2-4.5</span>
-          <span class="seg-desc">Middle of the road</span>
-        </button>
-        <button class="seg-btn active" data-value="ssp585" role="tab">
-          <span class="seg-name">SSP5-8.5</span>
-          <span class="seg-desc">Fossil-fueled</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Threshold slider -->
-    <div class="control-group">
-      <div class="control-label">Warming threshold</div>
-      <div class="seg-control" id="threshold-control" role="tablist" aria-label="Warming threshold">
-        <button class="seg-btn" data-value="1.5">
-          <span class="seg-name">1.5°C</span>
-          <span class="seg-desc">Paris goal</span>
-        </button>
-        <button class="seg-btn active" data-value="2.0">
-          <span class="seg-name">2°C</span>
-          <span class="seg-desc">Paris ceiling</span>
-        </button>
-        <button class="seg-btn" data-value="3.0">
-          <span class="seg-name">3°C</span>
-          <span class="seg-desc">Severe</span>
-        </button>
-        <button class="seg-btn" data-value="4.0">
-          <span class="seg-name">4°C</span>
-          <span class="seg-desc">Catastrophic</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- View mode -->
-    <div class="control-group">
-      <div class="control-label">Map shows</div>
-      <div class="seg-control" id="mode-control">
-        <button class="seg-btn active" data-value="crossing">
-          <span class="seg-name">First crossing year</span>
-        </button>
-        <button class="seg-btn" data-value="anomaly">
-          <span class="seg-name">Anomaly in</span>
-          <span class="seg-desc"><span id="year-readout">2050</span></span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Year scrubber (visible only in 'anomaly' mode) -->
-  <div class="year-scrubber" id="year-scrubber" hidden>
-    <div class="scrubber-row">
-      <button id="play-btn" class="play-btn" aria-label="Play">
-        <svg viewBox="0 0 24 24" width="14" height="14"><path id="play-icon" d="M8 5v14l11-7z" fill="currentColor"/></svg>
-      </button>
-      <div class="scrubber-stack">
-        <input type="range" id="year-slider" min="2015" max="2100" step="1" value="2050" />
-        <div class="scrubber-ticks">
-          <span>2015</span>
-          <span>2040</span>
-          <span>2060</span>
-          <span>2080</span>
-          <span>2100</span>
+        <!-- Lead + byline -->
+        <div class="hero-body">
+          <p class="hero-lead">
+            <span class="dropcap">G</span>lobal warming isn't uniform. The
+            Arctic heats up four times faster than the tropics; continents
+            outpace oceans; and under different emissions scenarios, regions
+            cross dangerous thresholds decades apart. Scroll to see
+            <em>when</em>, <em>where</em>, and <em>how&nbsp;much</em> — and what
+            choices change it.
+          </p>
+          <aside class="hero-byline">
+            <span class="byline-label">By</span>
+            <span class="byline-names">Yangyang · Rocío · Hoang</span>
+          </aside>
         </div>
-      </div>
-      <div class="year-tick" id="year-tick">2050</div>
-    </div>
-  </div>
-</section>
 
-<!-- ============== MAIN VIZ ============== -->
-<main class="viz-grid">
+        <!-- Temperature key — doubles as legend and divider -->
+        <figure class="hero-scale">
+          <div class="scale-bar" aria-hidden="true"></div>
+          <figcaption class="scale-ticks">
+            <span>−1°</span><span>0°</span><span>+1°</span><span>+2°</span
+            ><span>+3°</span><span>+4°</span><span>+5°C</span>
+          </figcaption>
+          <p class="scale-caption">
+            Global mean anomaly · °C relative to the 2015–2034 baseline
+          </p>
+        </figure>
 
-  <!-- Map -->
-  <section class="card map-card">
-    <header class="card-head">
-      <div>
-        <h2 class="card-title" id="map-title">First year each region crosses +2°C</h2>
-        <p class="card-sub" id="map-sub">Under SSP5-8.5 · relative to 2015–2034 baseline · click a cell to inspect</p>
-      </div>
-      <div class="map-legend" id="map-legend">
-        <!-- filled by JS -->
+        <!-- Scroll cue -->
+        <div class="hero-scroll">
+          <span class="scroll-rule" aria-hidden="true"></span>
+          <span class="scroll-label">Scroll to begin</span>
+        </div>
       </div>
     </header>
-    <div class="map-wrap">
-      <svg id="map" role="img" aria-label="World map of warming threshold crossing years"></svg>
-      <div class="tooltip" id="tooltip" role="tooltip"></div>
-      <div class="map-overlay-msg" id="map-loading">Loading climate data…</div>
-    </div>
-    <footer class="card-foot">
-      <div class="foot-stat">
-        <span class="foot-num" id="stat-pct-crossed">—</span>
-        <span class="foot-lbl">of land area crosses by 2100</span>
+
+    <!-- ============== SCROLLYTELLING ============== -->
+    <section class="scrolly" id="scrolly">
+      <div class="scroll-graphic" id="scroll-graphic">
+        <!-- All scrolly visualizations live here; one is visible at a time. -->
+
+        <!-- Act 1: Warming stripes -->
+        <div class="viz-panel active" data-viz="stripes" id="panel-stripes">
+          <div class="viz-meta">
+            <span class="viz-label"
+              >Act I · Global mean temperature, 2015–2100</span
+            >
+          </div>
+          <svg id="stripes-svg" class="full-svg"></svg>
+          <div class="viz-caption" id="stripes-caption">
+            <span class="caption-key" style="background: #1d3a4f"></span>cooler
+            <span class="caption-key" style="background: #5fa8d3"></span>+1°C
+            <span class="caption-key" style="background: #ffaa3d"></span>+3°C
+            <span class="caption-key" style="background: #c2261b"></span>+5°C
+          </div>
+        </div>
+
+        <!-- Act 2: Annotated world map -->
+        <div class="viz-panel" data-viz="map" id="panel-map">
+          <div class="viz-meta">
+            <span class="viz-label"
+              >Act II · When each region crosses +2°C ·
+              <span id="scroll-map-scenario">SSP5-8.5</span></span
+            >
+          </div>
+          <svg id="scroll-map" class="full-svg"></svg>
+          <div class="viz-caption" id="scroll-map-legend">
+            <!-- filled by JS -->
+          </div>
+        </div>
+
+        <!-- Act 3: Ridge plot -->
+        <div class="viz-panel" data-viz="ridge" id="panel-ridge">
+          <div class="viz-meta">
+            <span class="viz-label"
+              >Act III · Crossing-year distribution by latitude ·
+              <span id="ridge-scenario-label">SSP5-8.5 · +2°C</span></span
+            >
+          </div>
+          <svg id="ridge-svg" class="full-svg"></svg>
+        </div>
+
+        <!-- Act 4: Beeswarm -->
+        <div class="viz-panel" data-viz="beeswarm" id="panel-beeswarm">
+          <div class="viz-meta">
+            <span class="viz-label"
+              >Act IV · Every patch of Earth, plotted by when it crosses
+              +2°C</span
+            >
+          </div>
+          <svg id="beeswarm-svg" class="full-svg"></svg>
+          <div class="viz-caption" id="beeswarm-legend">
+            <!-- filled by JS -->
+          </div>
+        </div>
+
+        <!-- Act 5a: Fan chart -->
+        <div class="viz-panel" data-viz="fan" id="panel-fan">
+          <div class="viz-meta">
+            <span class="viz-label"
+              >Act V · The branching futures · global mean anomaly</span
+            >
+          </div>
+          <svg id="fan-svg" class="full-svg"></svg>
+        </div>
+
+        <!-- Act 5b: Lifetime timeline -->
+        <div class="viz-panel" data-viz="lifetime" id="panel-lifetime">
+          <div class="viz-meta">
+            <span class="viz-label">Act V · A lifetime under warming</span>
+          </div>
+          <div class="lifetime-controls">
+            <label for="birth-year-input">I was born in</label>
+            <input
+              type="number"
+              id="birth-year-input"
+              min="1930"
+              max="2025"
+              value="2000"
+            />
+            <div class="lifetime-scenario-toggle" id="lifetime-scenario-toggle">
+              <button class="seg-btn-mini" data-value="ssp126">SSP1-2.6</button>
+              <button class="seg-btn-mini" data-value="ssp245">SSP2-4.5</button>
+              <button class="seg-btn-mini active" data-value="ssp585">
+                SSP5-8.5
+              </button>
+            </div>
+          </div>
+          <svg id="lifetime-svg" class="full-svg"></svg>
+        </div>
+
+        <div class="scroll-loading" id="scroll-loading">
+          Loading climate data…
+        </div>
       </div>
-      <div class="foot-stat">
-        <span class="foot-num" id="stat-median-year">—</span>
-        <span class="foot-lbl">median crossing year</span>
+
+      <div class="scroll-steps" id="scroll-steps">
+        <div class="step" data-step="stripes">
+          <p class="step-eyebrow">Act I — The acceleration</p>
+          <h3>Every year, warmer than the last.</h3>
+          <p>
+            Each stripe is a single year of projected global temperature. The
+            cooler blues are the recent past; the angry reds are the futures we
+            may inherit. From the top, the world's most ambitious mitigation
+            path. From the bottom, fossil-fueled business as usual. The stripes
+            don't lie — every scenario warms, the question is only how much.
+          </p>
+        </div>
+
+        <div class="step" data-step="map">
+          <p class="step-eyebrow">Act II — The geography</p>
+          <h3>But warming isn't uniform.</h3>
+          <p>
+            Some places will cross +2°C this decade. Others may not see it
+            before 2100. The Arctic is already running ahead — high-latitude
+            land warms two to four times the global average. Meanwhile vast
+            stretches of the Southern Ocean stay cool, buffered by deep waters
+            that absorb the heat we add.
+          </p>
+        </div>
+
+        <div class="step" data-step="ridge">
+          <p class="step-eyebrow">Act III — The latitude divide</p>
+          <h3>The Arctic races. The Southern Ocean stalls.</h3>
+          <p>
+            Each ridge below shows the <em>distribution</em> of crossing years
+            for one latitude band. The Arctic peak crashes in early — most
+            Arctic cells cross +2°C in the 2030s. The tropics are a broader,
+            later wave. And the Southern Ocean barely rises off the floor: most
+            of its area never crosses within this century at all.
+          </p>
+        </div>
+
+        <div class="step" data-step="beeswarm">
+          <p class="step-eyebrow">Act IV — A patch of Earth, a single dot</p>
+          <h3>Six thousand pieces of the planet.</h3>
+          <p>
+            Each dot is one grid cell — one patch of Earth's surface. Their
+            horizontal position is the year they first cross +2°C. The dense red
+            wall on the left is the Arctic. The blue cluster on the far right —
+            beyond the timeline — are the cells that may never see +2°C.
+            Together they tell the same story the map does, but stripped of
+            geography.
+          </p>
+        </div>
+
+        <div class="step" data-step="fan">
+          <p class="step-eyebrow">Act V — The choice ahead</p>
+          <h3>Three futures, branching from now.</h3>
+          <p>
+            Up to today, all three scenarios share the same line. After that,
+            they fan apart — and the gap at 2100 is the difference our choices
+            make. The shaded band between SSP1-2.6 and SSP5-8.5 is the
+            <em>possibility space</em>: nearly 3°C of warming hangs on what
+            humanity does this decade.
+          </p>
+        </div>
+
+        <div class="step" data-step="lifetime">
+          <p class="step-eyebrow">Act V — In a lifetime</p>
+          <h3>What does this mean for you?</h3>
+          <p>
+            Type your birth year above. The timeline charts your life against
+            the warming milestones that will mark it: when the Arctic crosses
+            +2°C, when the world-as-a-whole does, when Europe does. These aren't
+            abstractions — they're events your generation will live through. The
+            scenario you pick changes the timing by decades.
+          </p>
+        </div>
+
+        <div class="step" data-step="finale">
+          <p class="step-eyebrow">Now — Explore</p>
+          <h3>The full picture, in your hands.</h3>
+          <p>
+            Below is the full dataset, interactive. Pick a scenario, a
+            threshold, a place. Click anywhere on the map to see how warming
+            will unfold for that patch of Earth. Compare regions. Scrub through
+            the years. The data is the same — only the lens changes.
+          </p>
+        </div>
       </div>
-      <div class="foot-stat">
-        <span class="foot-num" id="stat-first-region">—</span>
-        <span class="foot-lbl">first region to cross</span>
+    </section>
+
+    <!-- ============== INTERACTIVE FINALE ============== -->
+    <section class="finale-divider">
+      <div class="finale-divider-inner">
+        <span class="finale-eyebrow">Interactive Dashboard</span>
+        <h2>Explore the data yourself.</h2>
       </div>
+    </section>
+
+    <section class="controls" id="controls">
+      <div class="controls-row">
+        <!-- Scenario tabs -->
+        <div class="control-group">
+          <div class="control-label">Emissions scenario</div>
+          <div
+            class="seg-control"
+            id="scenario-control"
+            role="tablist"
+            aria-label="Emissions scenario"
+          >
+            <button class="seg-btn" data-value="ssp126" role="tab">
+              <span class="seg-name">SSP1-2.6</span>
+              <span class="seg-desc">Strong mitigation</span>
+            </button>
+            <button class="seg-btn" data-value="ssp245" role="tab">
+              <span class="seg-name">SSP2-4.5</span>
+              <span class="seg-desc">Middle of the road</span>
+            </button>
+            <button class="seg-btn active" data-value="ssp585" role="tab">
+              <span class="seg-name">SSP5-8.5</span>
+              <span class="seg-desc">Fossil-fueled</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Threshold slider -->
+        <div class="control-group">
+          <div class="control-label">Warming threshold</div>
+          <div
+            class="seg-control"
+            id="threshold-control"
+            role="tablist"
+            aria-label="Warming threshold"
+          >
+            <button class="seg-btn" data-value="1.5">
+              <span class="seg-name">1.5°C</span>
+              <span class="seg-desc">Paris goal</span>
+            </button>
+            <button class="seg-btn active" data-value="2.0">
+              <span class="seg-name">2°C</span>
+              <span class="seg-desc">Paris ceiling</span>
+            </button>
+            <button class="seg-btn" data-value="3.0">
+              <span class="seg-name">3°C</span>
+              <span class="seg-desc">Severe</span>
+            </button>
+            <button class="seg-btn" data-value="4.0">
+              <span class="seg-name">4°C</span>
+              <span class="seg-desc">Catastrophic</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- View mode -->
+        <div class="control-group">
+          <div class="control-label">Map shows</div>
+          <div class="seg-control" id="mode-control">
+            <button class="seg-btn active" data-value="crossing">
+              <span class="seg-name">First crossing year</span>
+            </button>
+            <button class="seg-btn" data-value="anomaly">
+              <span class="seg-name">Anomaly in</span>
+              <span class="seg-desc"><span id="year-readout">2050</span></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Year scrubber (visible only in 'anomaly' mode) -->
+      <div class="year-scrubber" id="year-scrubber" hidden>
+        <div class="scrubber-row">
+          <button id="play-btn" class="play-btn" aria-label="Play">
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path id="play-icon" d="M8 5v14l11-7z" fill="currentColor" />
+            </svg>
+          </button>
+          <div class="scrubber-stack">
+            <input
+              type="range"
+              id="year-slider"
+              min="2015"
+              max="2100"
+              step="1"
+              value="2050"
+            />
+            <div class="scrubber-ticks">
+              <span>2015</span>
+              <span>2040</span>
+              <span>2060</span>
+              <span>2080</span>
+              <span>2100</span>
+            </div>
+          </div>
+          <div class="year-tick" id="year-tick">2050</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== MAIN VIZ ============== -->
+    <main class="viz-grid">
+      <!-- Map -->
+      <section class="card map-card">
+        <header class="card-head">
+          <div>
+            <h2 class="card-title" id="map-title">
+              First year each region crosses +2°C
+            </h2>
+            <p class="card-sub" id="map-sub">
+              Under SSP5-8.5 · relative to 2015–2034 baseline · click a cell to
+              inspect
+            </p>
+          </div>
+          <div class="map-legend" id="map-legend">
+            <!-- filled by JS -->
+          </div>
+        </header>
+        <div class="map-wrap">
+          <svg
+            id="map"
+            role="img"
+            aria-label="World map of warming threshold crossing years"
+          ></svg>
+          <div class="tooltip" id="tooltip" role="tooltip"></div>
+          <div class="map-overlay-msg" id="map-loading">
+            Loading climate data…
+          </div>
+        </div>
+        <footer class="card-foot">
+          <div class="foot-stat">
+            <span class="foot-num" id="stat-pct-crossed">—</span>
+            <span class="foot-lbl">of land area crosses by 2100</span>
+          </div>
+          <div class="foot-stat">
+            <span class="foot-num" id="stat-median-year">—</span>
+            <span class="foot-lbl">median crossing year</span>
+          </div>
+          <div class="foot-stat">
+            <span class="foot-num" id="stat-first-region">—</span>
+            <span class="foot-lbl">first region to cross</span>
+          </div>
+        </footer>
+      </section>
+
+      <!-- Right column: global means + cell ts + histogram -->
+      <aside class="side-col">
+        <!-- Global means line chart -->
+        <section class="card">
+          <header class="card-head compact">
+            <div>
+              <h3 class="card-title">Global temperature trajectory</h3>
+              <p class="card-sub">
+                Area-weighted global-mean anomaly · all scenarios
+              </p>
+            </div>
+          </header>
+          <svg id="global-chart" class="side-chart"></svg>
+        </section>
+
+        <!-- Cell time series -->
+        <section class="card" id="cell-card">
+          <header class="card-head compact">
+            <div>
+              <h3 class="card-title" id="cell-title">
+                Click a region on the map
+              </h3>
+              <p class="card-sub" id="cell-sub">
+                Or pick one below to compare regional warming.
+              </p>
+            </div>
+          </header>
+          <div class="region-chips" id="region-chips">
+            <!-- filled by JS -->
+          </div>
+          <svg id="cell-chart" class="side-chart"></svg>
+        </section>
+
+        <!-- Histogram -->
+        <section class="card">
+          <header class="card-head compact">
+            <div>
+              <h3 class="card-title">Distribution of crossing years</h3>
+              <p class="card-sub">
+                Across all grid cells · current scenario & threshold
+              </p>
+            </div>
+          </header>
+          <svg id="histogram" class="side-chart"></svg>
+        </section>
+      </aside>
+    </main>
+
+    <!-- ============== WRITEUP ============== -->
+    <section class="writeup" id="writeup">
+      <div class="writeup-inner">
+        <h2>Project writeup</h2>
+
+        <article class="writeup-block">
+          <h3>What we've done so far</h3>
+          <p>
+            We took our Project 3 dashboard and rebuilt it from scratch as a
+            scroll-driven story called <em>A World on Fire</em>. Instead of
+            dumping everything on one page, the reader now scrolls through six
+            acts, each with a different chart: warming stripes, an annotated
+            world map, a ridge plot showing when different latitudes cross +2°C,
+            a beeswarm where every dot is a grid cell, a fan chart of how the
+            three SSP scenarios split apart, and finally a timeline you can
+            personalize with your own birth year. We wanted at least half the
+            visuals to be something other than a map, so the ridge plot and
+            beeswarm were new territory for us.
+          </p>
+          <p>
+            On the code side, each visualization is its own D3 module, and we
+            use Scrollama to detect which text block the reader is on and swap
+            the active chart accordingly. The original Project 3 dashboard (map,
+            line charts, histogram, year scrubber) still lives at the bottom so
+            people can poke around after the narrative ends. Everything pulls
+            from the same CMIP6 CESM2 data we processed in
+            <code>project-3.ipynb</code>, so no new datasets were needed.
+          </p>
+        </article>
+
+        <article class="writeup-block">
+          <h3>What will be the most challenging part</h3>
+          <p>
+            Honestly, the biggest challenge is making six totally different
+            chart types feel like they belong together. Going from color-coded
+            stripes to a density ridge plot to a force-layout beeswarm is a lot
+            of context-switching for the reader. We're relying on a shared color
+            palette across latitude bands and careful narration text to tie
+            everything together, but it's tricky to get right and we're still
+            tweaking the transitions between panels.
+          </p>
+          <p>
+            The beeswarm is also a real performance headache. There are about
+            6,000 dots and we run a d3-force collision simulation to lay them
+            out, so we had to pre-settle it off-screen (140 ticks before
+            painting anything) to avoid locking up the browser. It still has to
+            re-run whenever you switch scenarios. Beyond that, the lifetime
+            timeline at the end needs to land emotionally without being
+            cluttered, and the whole thing has to work on phones where our
+            two-column sticky layout has to collapse into a single column. Lots
+            of small problems that add up.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <footer class="page-foot">
+      <span>DSC 106 · Final Project · 2026</span>
+      <span>Data: CMIP6 (CESM2) via Google Cloud Public Datasets</span>
     </footer>
-  </section>
 
-  <!-- Right column: global means + cell ts + histogram -->
-  <aside class="side-col">
-
-    <!-- Global means line chart -->
-    <section class="card">
-      <header class="card-head compact">
-        <div>
-          <h3 class="card-title">Global temperature trajectory</h3>
-          <p class="card-sub">Area-weighted global-mean anomaly · all scenarios</p>
-        </div>
-      </header>
-      <svg id="global-chart" class="side-chart"></svg>
-    </section>
-
-    <!-- Cell time series -->
-    <section class="card" id="cell-card">
-      <header class="card-head compact">
-        <div>
-          <h3 class="card-title" id="cell-title">Click a region on the map</h3>
-          <p class="card-sub" id="cell-sub">Or pick one below to compare regional warming.</p>
-        </div>
-      </header>
-      <div class="region-chips" id="region-chips">
-        <!-- filled by JS -->
-      </div>
-      <svg id="cell-chart" class="side-chart"></svg>
-    </section>
-
-    <!-- Histogram -->
-    <section class="card">
-      <header class="card-head compact">
-        <div>
-          <h3 class="card-title">Distribution of crossing years</h3>
-          <p class="card-sub">Across all grid cells · current scenario & threshold</p>
-        </div>
-      </header>
-      <svg id="histogram" class="side-chart"></svg>
-    </section>
-
-  </aside>
-</main>
-
-<!-- ============== WRITEUP ============== -->
-<section class="writeup" id="writeup">
-  <div class="writeup-inner">
-    <h2>Project writeup</h2>
-
-    <article class="writeup-block">
-      <h3>What we've done so far</h3>
-      <p>
-        We took our Project 3 dashboard and rebuilt it from scratch as a scroll-driven
-        story called <em>A World on Fire</em>. Instead of dumping everything on one
-        page, the reader now scrolls through six acts, each with a different chart:
-        warming stripes, an annotated world map, a ridge plot showing when different
-        latitudes cross +2°C, a beeswarm where every dot is a grid cell, a fan chart
-        of how the three SSP scenarios split apart, and finally a timeline you can
-        personalize with your own birth year. We wanted at least half the visuals to
-        be something other than a map, so the ridge plot and beeswarm were new territory
-        for us.
-      </p>
-      <p>
-        On the code side, each visualization is its own D3 module, and we use Scrollama
-        to detect which text block the reader is on and swap the active chart accordingly.
-        The original Project 3 dashboard (map, line charts, histogram, year scrubber)
-        still lives at the bottom so people can poke around after the narrative ends.
-        Everything pulls from the same CMIP6 CESM2 data we processed in
-        <code>project-3.ipynb</code>, so no new datasets were needed.
-      </p>
-    </article>
-
-    <article class="writeup-block">
-      <h3>What will be the most challenging part</h3>
-      <p>
-        Honestly, the biggest challenge is making six totally different chart types feel
-        like they belong together. Going from color-coded stripes to a density ridge plot
-        to a force-layout beeswarm is a lot of context-switching for the reader. We're
-        relying on a shared color palette across latitude bands and careful narration
-        text to tie everything together, but it's tricky to get right and we're still
-        tweaking the transitions between panels.
-      </p>
-      <p>
-        The beeswarm is also a real performance headache. There are about 6,000 dots and
-        we run a d3-force collision simulation to lay them out, so we had to pre-settle
-        it off-screen (140 ticks before painting anything) to avoid locking up the browser.
-        It still has to re-run whenever you switch scenarios. Beyond that, the lifetime
-        timeline at the end needs to land emotionally without being cluttered, and the
-        whole thing has to work on phones where our two-column sticky layout has to
-        collapse into a single column. Lots of small problems that add up.
-      </p>
-    </article>
-  </div>
-</section>
-
-<footer class="page-foot">
-  <span>DSC 106 · Final Project · 2026</span>
-  <span>Data: CMIP6 (CESM2) via Google Cloud Public Datasets</span>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
-<script src="https://unpkg.com/scrollama"></script>
-<script src="js/app.js"></script>
-
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+    <script src="https://unpkg.com/scrollama"></script>
+    <script src="js/app.js"></script>
+  </body>
 </html>
