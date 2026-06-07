@@ -405,7 +405,14 @@ const mapModule = (() => {
     const d = `M${projected[0]}L${projected[1]}L${projected[2]}L${projected[3]}Z`;
 
     // Determine stroke color: white on the two darkest blues, black everywhere else
-    const DARK_BLUES = new Set(["#4a7d99", "#2d5a73", "#1d3a4f", "#356a8a", "#7a0a04", "#c2261b"]);
+    const DARK_BLUES = new Set([
+      "#4a7d99",
+      "#2d5a73",
+      "#1d3a4f",
+      "#356a8a",
+      "#7a0a04",
+      "#c2261b",
+    ]);
     const { scenario, threshold, mode, year } = state;
     const idx = latIdx * data.grid.n_lon + lonIdx;
     let fillColor = null;
@@ -416,13 +423,17 @@ const mapModule = (() => {
       const field = getYearAnomalyField(scenario, year);
       if (field) fillColor = anomalyScale(field[idx]);
     }
-    const strokeColor = (!fillColor || DARK_BLUES.has(fillColor)) ? "#fff" : "#000";
+    const strokeColor =
+      !fillColor || DARK_BLUES.has(fillColor) ? "#fff" : "#000";
 
     gSelection
       .append("path")
       .attr("d", d)
       .attr("fill", "none")
-      .attr("stroke", strokeColor === "#fff" ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.3)")
+      .attr(
+        "stroke",
+        strokeColor === "#fff" ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.3)"
+      )
       .attr("stroke-width", 4);
     gSelection
       .append("path")
@@ -462,19 +473,24 @@ const mapModule = (() => {
 function getRegionForCell(lat, lon) {
   const normLon = lon > 180 ? lon - 360 : lon;
   const specific = [
-    { name: "North America",    lat: [15, 75],  lon: [-170, -50] },
-    { name: "Europe",           lat: [35, 72],  lon: [-15,   45] },
-    { name: "Sahara/N. Africa", lat: [15, 35],  lon: [-15,   50] },
-    { name: "Amazon",           lat: [-15,  5], lon: [-75,  -45] },
-    { name: "South Asia",       lat: [5,   35], lon: [65,   100] },
+    { name: "North America", lat: [15, 75], lon: [-170, -50] },
+    { name: "Europe", lat: [35, 72], lon: [-15, 45] },
+    { name: "Sahara/N. Africa", lat: [15, 35], lon: [-15, 50] },
+    { name: "Amazon", lat: [-15, 5], lon: [-75, -45] },
+    { name: "South Asia", lat: [5, 35], lon: [65, 100] },
   ];
   for (const r of specific) {
-    if (lat >= r.lat[0] && lat <= r.lat[1] && normLon >= r.lon[0] && normLon <= r.lon[1])
+    if (
+      lat >= r.lat[0] &&
+      lat <= r.lat[1] &&
+      normLon >= r.lon[0] &&
+      normLon <= r.lon[1]
+    )
       return r.name;
   }
-  if (lat > 66)   return "Arctic";
-  if (lat < -66)  return "Antarctic";
-  if (lat >= 30)  return "Northern mid-latitudes";
+  if (lat > 66) return "Arctic";
+  if (lat < -66) return "Antarctic";
+  if (lat >= 30) return "Northern mid-latitudes";
   if (lat <= -30) return "Southern mid-latitudes";
   return "Tropics";
 }
@@ -534,6 +550,34 @@ function showTooltip(event, d) {
   tip.style.left = `${left}px`;
   tip.style.top = `${top}px`;
   tip.classList.add("visible");
+}
+
+// =========================================================
+// SHARED SCROLLY TOOLTIP
+// Reuses the single global #tooltip element, re-parenting it
+// into whichever scrolly panel is asking so absolute positioning
+// stays correct across panels.
+// =========================================================
+function scrollyTip(hostId, event, html) {
+  const tip = document.getElementById("tooltip");
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  if (tip.parentElement !== host) host.appendChild(tip);
+  tip.innerHTML = html;
+  const hostRect = host.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  let left = event.clientX - hostRect.left + 16;
+  let top = event.clientY - hostRect.top + 16;
+  if (left + tipRect.width > hostRect.width - 8)
+    left = event.clientX - hostRect.left - tipRect.width - 16;
+  if (top + tipRect.height > hostRect.height - 8)
+    top = event.clientY - hostRect.top - tipRect.height - 16;
+  tip.style.left = `${left}px`;
+  tip.style.top = `${top}px`;
+  tip.classList.add("visible");
+}
+function scrollyTipHide() {
+  document.getElementById("tooltip").classList.remove("visible");
 }
 
 // =========================================================
@@ -1240,17 +1284,67 @@ const scrollyState = {
   activeStep: "stripes",
   birthYear: 2000,
   lifetimeScenario: "ssp585",
+  lifeScrubYear: null, // year the lifetime age-scrubber is parked on
 };
 
 // 7 latitude bands, ordered from south to north
 const LAT_BANDS = [
-  { id: "antarctic",       name: "Antarctic",        sub: "below −66°",     min: -90, max: -66, color: "#2d5a73" },
-  { id: "southern-ocean",  name: "Southern Ocean",   sub: "−66° to −30°",   min: -66, max: -30, color: "#5fa8d3" },
-  { id: "s-subtropics",    name: "S. Subtropics",    sub: "−30° to −10°",   min: -30, max: -10, color: "#88b8c4" },
-  { id: "tropics",         name: "Tropics",          sub: "−10° to +10°",   min: -10, max:  10, color: "#fde29c" },
-  { id: "n-subtropics",    name: "N. Subtropics",    sub: "+10° to +30°",   min:  10, max:  30, color: "#ffaa3d" },
-  { id: "n-temperate",     name: "N. Temperate",     sub: "+30° to +66°",   min:  30, max:  66, color: "#ff5c2b" },
-  { id: "arctic",          name: "Arctic",           sub: "above +66°",     min:  66, max:  90, color: "#7a0a04" },
+  {
+    id: "antarctic",
+    name: "Antarctic",
+    sub: "below −66°",
+    min: -90,
+    max: -66,
+    color: "#2d5a73",
+  },
+  {
+    id: "southern-ocean",
+    name: "Southern Ocean",
+    sub: "−66° to −30°",
+    min: -66,
+    max: -30,
+    color: "#5fa8d3",
+  },
+  {
+    id: "s-subtropics",
+    name: "S. Subtropics",
+    sub: "−30° to −10°",
+    min: -30,
+    max: -10,
+    color: "#88b8c4",
+  },
+  {
+    id: "tropics",
+    name: "Tropics",
+    sub: "−10° to +10°",
+    min: -10,
+    max: 10,
+    color: "#fde29c",
+  },
+  {
+    id: "n-subtropics",
+    name: "N. Subtropics",
+    sub: "+10° to +30°",
+    min: 10,
+    max: 30,
+    color: "#ffaa3d",
+  },
+  {
+    id: "n-temperate",
+    name: "N. Temperate",
+    sub: "+30° to +66°",
+    min: 30,
+    max: 66,
+    color: "#ff5c2b",
+  },
+  {
+    id: "arctic",
+    name: "Arctic",
+    sub: "above +66°",
+    min: 66,
+    max: 90,
+    color: "#7a0a04",
+  },
 ];
 
 function latBandFor(lat) {
@@ -1260,12 +1354,22 @@ function latBandFor(lat) {
 
 // Stripe palette — diverging blue→yellow→red over [-1, 6]°C
 function stripeColor(anom) {
-  const scale = d3.scaleThreshold()
+  const scale = d3
+    .scaleThreshold()
     .domain([-0.5, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0])
     .range([
-      "#0d2438", "#1d3a4f", "#356a8a", "#5fa8d3",
-      "#a8c8d8", "#fde29c", "#ffaa3d", "#ff8d4a",
-      "#ff5c2b", "#c2261b", "#7a0a04", "#4a0500",
+      "#0d2438",
+      "#1d3a4f",
+      "#356a8a",
+      "#5fa8d3",
+      "#a8c8d8",
+      "#fde29c",
+      "#ffaa3d",
+      "#ff8d4a",
+      "#ff5c2b",
+      "#c2261b",
+      "#7a0a04",
+      "#4a0500",
     ]);
   return scale(anom);
 }
@@ -1303,7 +1407,9 @@ const stripesModule = (() => {
   function init() {
     svg = d3.select("#stripes-svg");
     g = svg.append("g").attr("class", "stripes-root");
-    const ro = new ResizeObserver(() => { build(); });
+    const ro = new ResizeObserver(() => {
+      build();
+    });
     ro.observe(svg.node());
     build();
   }
@@ -1324,20 +1430,22 @@ const stripesModule = (() => {
     g.selectAll("*").remove();
 
     const years = data.grid.years;
-    const x = d3.scaleLinear()
+    const x = d3
+      .scaleLinear()
       .domain([d3.min(years), d3.max(years) + 1])
       .range([m.left, width - m.right]);
 
     const rowH = Math.min(80, (height - m.top - m.bottom) / SCENARIOS.length);
     const totalRowsH = rowH * SCENARIOS.length;
-    const startY = m.top + ((height - m.top - m.bottom) - totalRowsH) / 2;
+    const startY = m.top + (height - m.top - m.bottom - totalRowsH) / 2;
 
     // X axis
     g.append("g")
       .attr("class", "stripe-axis")
       .attr("transform", `translate(0, ${startY + totalRowsH + 10})`)
       .call(
-        d3.axisBottom(x)
+        d3
+          .axisBottom(x)
           .tickValues([2020, 2040, 2060, 2080, 2100])
           .tickFormat(d3.format("d"))
           .tickSize(6)
@@ -1365,16 +1473,19 @@ const stripesModule = (() => {
 
       // Stripes
       const w = (width - m.right - m.left) / years.length;
-      const stripeG = g.append("g").attr("class", `stripe-row stripe-row-${sc}`);
-      stripeG.selectAll("rect")
+      const stripeG = g
+        .append("g")
+        .attr("class", `stripe-row stripe-row-${sc}`);
+      stripeG
+        .selectAll("rect")
         .data(years.map((y, i) => ({ y, anom: series[i] })))
         .join("rect")
         .attr("class", "stripe-rect")
-        .attr("x", d => x(d.y))
+        .attr("x", (d) => x(d.y))
         .attr("y", rowY + 4)
         .attr("width", w + 0.6)
         .attr("height", rowH - 8)
-        .attr("fill", d => stripeColor(d.anom))
+        .attr("fill", (d) => stripeColor(d.anom))
         .style("opacity", 0)
         .transition()
         .delay((d, i) => i * 6 + rowIdx * 80)
@@ -1401,24 +1512,84 @@ const stripesModule = (() => {
       .style("font-size", "10px")
       .style("letter-spacing", "0.16em")
       .style("text-transform", "uppercase")
-      .text("Each stripe = one year · color = global mean anomaly relative to 2015–2034");
+      .text(
+        "Each stripe = one year · color = global mean anomaly relative to 2015–2034"
+      );
 
-    // 2024 divider line
-    const divX = x(2024.5);
+    // 2026 divider line
+    const divX = x(2026.6);
     g.append("line")
       .attr("class", "stripe-divider-line")
-      .attr("x1", divX).attr("x2", divX)
-      .attr("y1", startY - 4).attr("y2", startY + totalRowsH + 22);
+      .attr("x1", divX)
+      .attr("x2", divX)
+      .attr("y1", startY - 4)
+      .attr("y2", startY + totalRowsH + 22);
     g.append("text")
       .attr("class", "stripe-divider-text")
       .attr("x", divX + 4)
       .attr("y", startY + totalRowsH + 36)
       .text("today");
 
+    // ---- Interactive hover-scrub ----
+    const w = (width - m.right - m.left) / years.length;
+    const guide = g
+      .append("line")
+      .attr("class", "stripe-guide")
+      .attr("y1", startY - 4)
+      .attr("y2", startY + totalRowsH + 4)
+      .style("opacity", 0);
+    const yearBadge = g
+      .append("text")
+      .attr("class", "stripe-guide-year")
+      .attr("y", startY - 10)
+      .attr("text-anchor", "middle")
+      .style("opacity", 0);
+
+    g.append("rect")
+      .attr("class", "stripe-overlay")
+      .attr("x", m.left)
+      .attr("y", startY)
+      .attr("width", width - m.left - m.right)
+      .attr("height", totalRowsH)
+      .style("fill", "transparent")
+      .style("cursor", "crosshair")
+      .on("pointermove", function (event) {
+        const [mx] = d3.pointer(event, g.node());
+        const yr = Math.max(
+          years[0],
+          Math.min(years[years.length - 1], Math.round(x.invert(mx)))
+        );
+        const i = years.indexOf(yr);
+        if (i < 0) return;
+        const gx = x(yr) + w / 2;
+        guide.attr("x1", gx).attr("x2", gx).style("opacity", 1);
+        yearBadge.attr("x", gx).text(yr).style("opacity", 1);
+        const rows = SCENARIOS.map((sc) => {
+          const v = data.globalMeans[sc][i];
+          return `<div class="tip-row"><span class="tip-key" style="color:${stripeColor(
+            v
+          )}">${SCENARIO_LABELS[sc]}</span><span class="tip-val">+${v.toFixed(
+            2
+          )}°C</span></div>`;
+        }).join("");
+        scrollyTip(
+          "panel-stripes",
+          event,
+          `<div class="tip-headline" style="font-size:15px">${yr}</div>${rows}`
+        );
+      })
+      .on("pointerleave", () => {
+        guide.style("opacity", 0);
+        yearBadge.style("opacity", 0);
+        scrollyTipHide();
+      });
+
     stripesBuilt = true;
   }
 
-  function show() { if (!stripesBuilt) build(); }
+  function show() {
+    if (!stripesBuilt) build();
+  }
   return { init, show, build };
 })();
 
@@ -1426,14 +1597,42 @@ const stripesModule = (() => {
 // ACT II — ANNOTATED SCROLL MAP
 // =========================================================
 const scrollMapModule = (() => {
-  let svg, g, dims, projection, path;
+  let svg, g, gZoom, dims, projection, path, zoom;
   let built = false;
 
   const ANNOTATIONS = [
-    { name: "Arctic",         lat: 78,  lon:  10, dx:  60, dy: -60, descrip: "crosses by 2035" },
-    { name: "Amazon",         lat: -5,  lon: -60, dx: -80, dy:  40, descrip: "crosses by 2050" },
-    { name: "South Asia",     lat: 25,  lon:  80, dx:  60, dy:  60, descrip: "crosses by 2045" },
-    { name: "Southern Ocean", lat: -60, lon:  10, dx:  30, dy:  70, descrip: "may never cross" },
+    {
+      name: "Arctic",
+      lat: 78,
+      lon: 10,
+      dx: 60,
+      dy: -60,
+      descrip: "crosses by 2035",
+    },
+    {
+      name: "Amazon",
+      lat: -5,
+      lon: -60,
+      dx: -80,
+      dy: 40,
+      descrip: "crosses by 2050",
+    },
+    {
+      name: "South Asia",
+      lat: 25,
+      lon: 80,
+      dx: 60,
+      dy: 60,
+      descrip: "crosses by 2045",
+    },
+    {
+      name: "Southern Ocean",
+      lat: -60,
+      lon: 10,
+      dx: 30,
+      dy: 70,
+      descrip: "may never cross",
+    },
   ];
 
   function init() {
@@ -1449,20 +1648,48 @@ const scrollMapModule = (() => {
     const container = d3.select("#scroll-map-legend");
     container.selectAll("*").remove();
     const colors = crossingScale.range();
-    const labels = ["<2030", "2030s", "2040s", "2050s", "2060s", "2070s", "2080s", "≥2090"];
-    const row = container.append("div").style("display", "flex").style("gap", "2px").style("align-items", "flex-end");
+    const labels = [
+      "<2030",
+      "2030s",
+      "2040s",
+      "2050s",
+      "2060s",
+      "2070s",
+      "2080s",
+      "≥2090",
+    ];
+    const row = container
+      .append("div")
+      .style("display", "flex")
+      .style("gap", "2px")
+      .style("align-items", "flex-end");
     colors.forEach((c, i) => {
-      const cell = row.append("div").style("display", "flex").style("flex-direction", "column").style("align-items", "center");
-      cell.append("div")
-        .style("width", "24px").style("height", "10px")
-        .style("background", c).style("border-radius", "2px");
-      cell.append("div")
-        .style("font-size", "8px").style("color", "var(--ink-faint)")
-        .style("font-family", "var(--font-mono)").style("margin-top", "2px")
+      const cell = row
+        .append("div")
+        .style("display", "flex")
+        .style("flex-direction", "column")
+        .style("align-items", "center");
+      cell
+        .append("div")
+        .style("width", "24px")
+        .style("height", "10px")
+        .style("background", c)
+        .style("border-radius", "2px");
+      cell
+        .append("div")
+        .style("font-size", "8px")
+        .style("color", "var(--ink-faint)")
+        .style("font-family", "var(--font-mono)")
+        .style("margin-top", "2px")
         .text(labels[i]);
     });
-    container.append("div").attr("class", "legend-never").style("margin-left", "12px")
-      .html(`<span class="legend-never-swatch"></span><span>never by 2100</span>`);
+    container
+      .append("div")
+      .attr("class", "legend-never")
+      .style("margin-left", "12px")
+      .html(
+        `<span class="legend-never-swatch"></span><span>never by 2100</span>`
+      );
   }
 
   function build() {
@@ -1473,101 +1700,197 @@ const scrollMapModule = (() => {
     dims = { width, height };
 
     g.selectAll("*").remove();
+    // Everything drawable lives in gZoom so pan/zoom transforms one node.
+    gZoom = g.append("g").attr("class", "scroll-map-zoom");
 
     projection = d3.geoEqualEarth().fitExtent(
-      [[16, 50], [width - 16, height - 60]],
+      [
+        [16, 50],
+        [width - 16, height - 60],
+      ],
       { type: "Sphere" }
     );
     path = d3.geoPath(projection);
 
     // Sphere + graticule
-    g.append("path").attr("class", "sphere").attr("d", path({ type: "Sphere" }));
+    gZoom
+      .append("path")
+      .attr("class", "sphere")
+      .attr("d", path({ type: "Sphere" }));
     const gratic = d3.geoGraticule().step([30, 30])();
-    g.append("path").attr("class", "graticule").attr("d", path(gratic));
+    gZoom.append("path").attr("class", "graticule").attr("d", path(gratic));
 
     // Cells
     const { lats, lons, n_lat, n_lon } = data.grid;
     const dLat = (lats[1] - lats[0]) / 2;
     const dLon = (lons[1] - lons[0]) / 2;
     const flat = data.crossings["ssp585"]["2.0"];
-    const cellG = g.append("g").attr("class", "scroll-map-cells");
+    const cellG = gZoom.append("g").attr("class", "scroll-map-cells");
 
     for (let i = 0; i < n_lat; i++) {
       for (let j = 0; j < n_lon; j++) {
         const lat = lats[i];
         const lon = lons[j];
         const corners = [
-          [lon - dLon, lat - dLat], [lon + dLon, lat - dLat],
-          [lon + dLon, lat + dLat], [lon - dLon, lat + dLat],
+          [lon - dLon, lat - dLat],
+          [lon + dLon, lat - dLat],
+          [lon + dLon, lat + dLat],
+          [lon - dLon, lat + dLat],
         ];
-        const projected = corners.map(c => projection(c));
-        if (projected.some(p => !p || isNaN(p[0]))) continue;
-        const xs = projected.map(p => p[0]);
+        const projected = corners.map((c) => projection(c));
+        if (projected.some((p) => !p || isNaN(p[0]))) continue;
+        const xs = projected.map((p) => p[0]);
         if (Math.max(...xs) - Math.min(...xs) > 200) continue;
         const idx = i * n_lon + j;
         const v = flat[idx];
         const d = `M${projected[0]}L${projected[1]}L${projected[2]}L${projected[3]}Z`;
-        cellG.append("path")
+        cellG
+          .append("path")
           .attr("d", d)
           .attr("class", v === null ? "map-cell never" : "map-cell")
-          .attr("fill", v === null ? null : crossingScale(v));
+          .attr("fill", v === null ? null : crossingScale(v))
+          .datum({ lat, lon, idx, crossing: v })
+          .on("pointerenter", onCellEnter)
+          .on("pointermove", onCellMove)
+          .on("pointerleave", onCellLeave);
       }
     }
 
     // Coastlines
     if (data.worldGeo) {
-      g.append("path")
+      gZoom
+        .append("path")
         .attr("d", path(data.worldGeo))
         .attr("fill", "none")
         .attr("stroke", "rgba(0,0,0,0.55)")
         .attr("stroke-width", 2.4)
-        .attr("stroke-linejoin", "round");
-      g.append("path")
+        .attr("stroke-linejoin", "round")
+        .style("pointer-events", "none")
+        .style("vector-effect", "non-scaling-stroke");
+      gZoom
+        .append("path")
         .attr("d", path(data.worldGeo))
-        .attr("class", "coastline");
+        .attr("class", "coastline")
+        .style("pointer-events", "none")
+        .style("vector-effect", "non-scaling-stroke");
     }
 
-    // Annotations
-    const annoG = g.append("g").attr("class", "scroll-map-annos");
-    ANNOTATIONS.forEach(a => {
+    // Annotations (narrative labels — fade out when the reader zooms in)
+    const annoG = gZoom
+      .append("g")
+      .attr("class", "scroll-map-annos")
+      .style("pointer-events", "none");
+    ANNOTATIONS.forEach((a) => {
       const [px, py] = projection([a.lon, a.lat]);
-      const tx = px + a.dx, ty = py + a.dy;
-      annoG.append("circle")
+      const tx = px + a.dx,
+        ty = py + a.dy;
+      annoG
+        .append("circle")
         .attr("class", "scroll-map-anno-circle")
-        .attr("cx", px).attr("cy", py).attr("r", 14);
-      annoG.append("path")
+        .attr("cx", px)
+        .attr("cy", py)
+        .attr("r", 14);
+      annoG
+        .append("path")
         .attr("class", "scroll-map-anno-line")
         .attr("d", `M${px},${py} L${tx},${ty}`);
-      annoG.append("text")
+      annoG
+        .append("text")
         .attr("class", "scroll-map-anno-bg")
-        .attr("x", tx).attr("y", ty)
+        .attr("x", tx)
+        .attr("y", ty)
         .attr("text-anchor", a.dx < 0 ? "end" : "start")
         .text(a.name);
-      annoG.append("text")
+      annoG
+        .append("text")
         .attr("class", "scroll-map-annotation")
-        .attr("x", tx).attr("y", ty)
+        .attr("x", tx)
+        .attr("y", ty)
         .attr("text-anchor", a.dx < 0 ? "end" : "start")
         .text(a.name);
-      annoG.append("text")
+      annoG
+        .append("text")
         .attr("class", "scroll-map-anno-bg")
-        .attr("x", tx).attr("y", ty + 13)
+        .attr("x", tx)
+        .attr("y", ty + 13)
         .attr("text-anchor", a.dx < 0 ? "end" : "start")
         .style("font-size", "9px")
         .style("fill", "var(--ink-faint)")
         .text(a.descrip);
-      annoG.append("text")
+      annoG
+        .append("text")
         .attr("class", "scroll-map-annotation")
-        .attr("x", tx).attr("y", ty + 13)
+        .attr("x", tx)
+        .attr("y", ty + 13)
         .attr("text-anchor", a.dx < 0 ? "end" : "start")
         .style("font-size", "9px")
         .style("fill", "var(--ink-soft)")
         .text(a.descrip);
     });
 
+    // ---- Pan + zoom ----
+    zoom = d3
+      .zoom()
+      .scaleExtent([1, 8])
+      .translateExtent([
+        [0, 0],
+        [width, height],
+      ])
+      .on("zoom", (event) => {
+        gZoom.attr("transform", event.transform);
+        const zoomed = event.transform.k > 1.05;
+        d3.select("#scroll-map-hint").classed("dim", zoomed);
+        annoG.style("opacity", zoomed ? 0 : 1);
+      });
+    svg.call(zoom).on("dblclick.zoom", null);
+    svg.on("dblclick", () =>
+      svg.transition().duration(450).call(zoom.transform, d3.zoomIdentity)
+    );
+
+    // Hint
+    g.append("text")
+      .attr("id", "scroll-map-hint")
+      .attr("class", "scroll-map-hint")
+      .attr("x", width - 16)
+      .attr("y", height - 14)
+      .attr("text-anchor", "end")
+      .text("scroll to zoom · drag to pan · double-click to reset");
+
     built = true;
   }
 
-  function show() { if (!built) build(); }
+  function onCellEnter(event, d) {
+    d3.select(this).raise().classed("cell-hover", true);
+    onCellMove(event, d);
+  }
+  function onCellMove(event, d) {
+    const latStr = `${Math.abs(d.lat).toFixed(1)}°${d.lat >= 0 ? "N" : "S"}`;
+    const normLon = d.lon > 180 ? d.lon - 360 : d.lon;
+    const lonStr = `${Math.abs(normLon).toFixed(1)}°${
+      normLon >= 0 ? "E" : "W"
+    }`;
+    const region = getRegionForCell(d.lat, d.lon);
+    const headline =
+      d.crossing == null
+        ? "never crosses +2°C by 2100"
+        : `crosses +2°C in ${d.crossing}`;
+    scrollyTip(
+      "panel-map",
+      event,
+      `
+      <div class="tip-row"><span class="tip-key">Location</span><span class="tip-val">${latStr}, ${lonStr}</span></div>
+      <div class="tip-row"><span class="tip-key">Region</span><span class="tip-val">${region}</span></div>
+      <div class="tip-headline">${headline}</div>`
+    );
+  }
+  function onCellLeave() {
+    d3.select(this).classed("cell-hover", false);
+    scrollyTipHide();
+  }
+
+  function show() {
+    if (!built) build();
+  }
   return { init, show };
 })();
 
@@ -1580,14 +1903,16 @@ const ridgeModule = (() => {
 
   // Kernel density estimator
   function kde(kernel, bandwidth, sampleX) {
-    return function(values) {
-      return sampleX.map(x => [
+    return function (values) {
+      return sampleX.map((x) => [
         x,
-        d3.mean(values, v => kernel((x - v) / bandwidth)) || 0,
+        d3.mean(values, (v) => kernel((x - v) / bandwidth)) || 0,
       ]);
     };
   }
-  function gaussian(u) { return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI); }
+  function gaussian(u) {
+    return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
+  }
 
   function init() {
     svg = d3.select("#ridge-svg");
@@ -1616,11 +1941,16 @@ const ridgeModule = (() => {
       .style("font-size", "10px")
       .style("letter-spacing", "0.16em")
       .style("text-transform", "uppercase")
-      .text("Each ridge = a kernel density of crossing years inside one latitude band");
+      .text(
+        "Each ridge = a kernel density of crossing years inside one latitude band"
+      );
 
     const xMax = 2102;
     const xMin = 2018;
-    const x = d3.scaleLinear().domain([xMin, xMax]).range([m.left, width - m.right]);
+    const x = d3
+      .scaleLinear()
+      .domain([xMin, xMax])
+      .range([m.left, width - m.right]);
 
     const bandHeight = (height - m.top - m.bottom) / LAT_BANDS.length;
 
@@ -1628,7 +1958,12 @@ const ridgeModule = (() => {
     g.append("g")
       .attr("class", "ridge-axis")
       .attr("transform", `translate(0, ${height - m.bottom + 6})`)
-      .call(d3.axisBottom(x).tickValues([2020, 2040, 2060, 2080, 2100]).tickFormat(d3.format("d")));
+      .call(
+        d3
+          .axisBottom(x)
+          .tickValues([2020, 2040, 2060, 2080, 2100])
+          .tickFormat(d3.format("d"))
+      );
     g.append("text")
       .attr("class", "ridge-sublabel")
       .attr("x", (width - m.right + m.left) / 2)
@@ -1643,13 +1978,17 @@ const ridgeModule = (() => {
 
     // From north to south for natural reading (Arctic at top)
     const orderedBands = LAT_BANDS.slice().reverse();
+    const bandRows = []; // geometry + data for the scrub interaction
 
     orderedBands.forEach((band, rowIdx) => {
       const rowY = m.top + rowIdx * bandHeight;
-      const bandCells = cells.filter(c => c.band.id === band.id);
-      const crossed = bandCells.filter(c => c.crossing !== null).map(c => c.crossing);
+      const bandCells = cells.filter((c) => c.band.id === band.id);
+      const crossed = bandCells
+        .filter((c) => c.crossing !== null)
+        .map((c) => c.crossing);
       const total = bandCells.length;
       const crossedPct = total ? Math.round((crossed.length / total) * 100) : 0;
+      bandRows.push({ band, rowY, crossed, total });
 
       // Row label
       g.append("text")
@@ -1681,8 +2020,10 @@ const ridgeModule = (() => {
       if (crossed.length < 2) {
         // Flat line if no data
         g.append("line")
-          .attr("x1", m.left).attr("x2", width - m.right)
-          .attr("y1", rowY + bandHeight - 6).attr("y2", rowY + bandHeight - 6)
+          .attr("x1", m.left)
+          .attr("x2", width - m.right)
+          .attr("y1", rowY + bandHeight - 6)
+          .attr("y2", rowY + bandHeight - 6)
           .attr("stroke", band.color)
           .attr("stroke-width", 1.2)
           .attr("opacity", 0.6);
@@ -1692,14 +2033,18 @@ const ridgeModule = (() => {
       // KDE
       const density = estimator(crossed);
       const ridgeH = bandHeight * 1.4; // overlap rows
-      const yMax = d3.max(density, d => d[1]) || 1;
-      const yScale = d3.scaleLinear().domain([0, yMax]).range([rowY + bandHeight - 4, rowY + bandHeight - ridgeH]);
+      const yMax = d3.max(density, (d) => d[1]) || 1;
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, yMax])
+        .range([rowY + bandHeight - 4, rowY + bandHeight - ridgeH]);
 
-      const area = d3.area()
+      const area = d3
+        .area()
         .curve(d3.curveBasis)
-        .x(d => x(d[0]))
+        .x((d) => x(d[0]))
         .y0(rowY + bandHeight - 4)
-        .y1(d => yScale(d[1]));
+        .y1((d) => yScale(d[1]));
 
       g.append("path")
         .attr("class", "ridge-path")
@@ -1717,8 +2062,10 @@ const ridgeModule = (() => {
       const median = d3.quantile(sorted, 0.5);
       if (median != null) {
         g.append("line")
-          .attr("x1", x(median)).attr("x2", x(median))
-          .attr("y1", rowY + bandHeight - 4).attr("y2", rowY + bandHeight - 18)
+          .attr("x1", x(median))
+          .attr("x2", x(median))
+          .attr("y1", rowY + bandHeight - 4)
+          .attr("y2", rowY + bandHeight - 18)
           .attr("stroke", "var(--ink)")
           .attr("stroke-width", 1)
           .attr("opacity", 0.55);
@@ -1732,10 +2079,56 @@ const ridgeModule = (() => {
       }
     });
 
+    // ---- Scrub line: drag/hover across years to read cumulative % crossed ----
+    const scrubG = g.append("g").style("opacity", 0);
+    const scrubLine = scrubG
+      .append("line")
+      .attr("class", "ridge-scrub-line")
+      .attr("y1", m.top - 6)
+      .attr("y2", height - m.bottom);
+    const scrubYear = scrubG
+      .append("text")
+      .attr("class", "ridge-scrub-year")
+      .attr("y", m.top - 10)
+      .attr("text-anchor", "middle");
+    // Per-band running-% labels that ride along the scrub line
+    const scrubLabels = bandRows.map((r) =>
+      scrubG
+        .append("text")
+        .attr("class", "ridge-scrub-pct")
+        .attr("y", r.rowY + bandHeight * 0.55 + 24)
+        .attr("text-anchor", "middle")
+        .style("fill", r.band.color)
+    );
+
+    g.append("rect")
+      .attr("x", m.left)
+      .attr("y", m.top - 6)
+      .attr("width", width - m.left - m.right)
+      .attr("height", height - m.bottom - m.top + 6)
+      .style("fill", "transparent")
+      .style("cursor", "ew-resize")
+      .on("pointermove", function (event) {
+        const [mx] = d3.pointer(event, g.node());
+        const yr = Math.max(xMin, Math.min(xMax, Math.round(x.invert(mx))));
+        const px = x(yr);
+        scrubG.style("opacity", 1);
+        scrubLine.attr("x1", px).attr("x2", px);
+        scrubYear.attr("x", px).text(yr);
+        bandRows.forEach((r, i) => {
+          const n = r.crossed.filter((c) => c <= yr).length;
+          const pct = r.total ? Math.round((n / r.total) * 100) : 0;
+          scrubLabels[i].attr("x", px).text(`${pct}%`);
+        });
+      })
+      .on("pointerleave", () => scrubG.style("opacity", 0));
+
     built = true;
   }
 
-  function show() { if (!built) build(); }
+  function show() {
+    if (!built) build();
+  }
   return { init, show };
 })();
 
@@ -1759,10 +2152,18 @@ const beeswarmModule = (() => {
   function buildLegend() {
     const container = d3.select("#beeswarm-legend");
     container.selectAll("*").remove();
-    LAT_BANDS.slice().reverse().forEach(b => {
-      container.append("span").style("display", "inline-flex").style("align-items", "center").style("margin-right", "10px")
-        .html(`<span class="caption-key" style="background:${b.color}"></span><span>${b.name}</span>`);
-    });
+    LAT_BANDS.slice()
+      .reverse()
+      .forEach((b) => {
+        container
+          .append("span")
+          .style("display", "inline-flex")
+          .style("align-items", "center")
+          .style("margin-right", "10px")
+          .html(
+            `<span class="caption-key" style="background:${b.color}"></span><span>${b.name}</span>`
+          );
+      });
   }
 
   function computeNodes() {
@@ -1771,10 +2172,11 @@ const beeswarmModule = (() => {
     const NEVER_X = 2105;
     const yearJitter = () => (Math.random() - 0.5) * 0.6;
 
-    nodes = sample.map(c => ({
+    nodes = sample.map((c) => ({
       ...c,
       // target x: crossing year or NEVER_X
-      tx: c.crossing == null ? NEVER_X + yearJitter() : c.crossing + yearJitter(),
+      tx:
+        c.crossing == null ? NEVER_X + yearJitter() : c.crossing + yearJitter(),
     }));
   }
 
@@ -1782,10 +2184,13 @@ const beeswarmModule = (() => {
     const tip = document.getElementById("tooltip");
     const latStr = `${Math.abs(d.lat).toFixed(1)}°${d.lat >= 0 ? "N" : "S"}`;
     const normLon = d.lon > 180 ? d.lon - 360 : d.lon;
-    const lonStr = `${Math.abs(normLon).toFixed(1)}°${normLon >= 0 ? "E" : "W"}`;
-    const headline = d.crossing == null
-      ? "never crosses +2°C by 2100"
-      : `crosses +2°C in ${d.crossing}`;
+    const lonStr = `${Math.abs(normLon).toFixed(1)}°${
+      normLon >= 0 ? "E" : "W"
+    }`;
+    const headline =
+      d.crossing == null
+        ? "never crosses +2°C by 2100"
+        : `crosses +2°C in ${d.crossing}`;
     tip.innerHTML = `
       <div class="tip-row"><span class="tip-key">Location</span><span class="tip-val">${latStr}, ${lonStr}</span></div>
       <div class="tip-row"><span class="tip-key">Band</span><span class="tip-val">${d.band.name}</span></div>
@@ -1799,13 +2204,17 @@ const beeswarmModule = (() => {
     let left = event.clientX - hostRect.left + 14;
     let top = event.clientY - hostRect.top + 14;
     const tipRect = tip.getBoundingClientRect();
-    if (left + tipRect.width > hostRect.width - 8) left = event.clientX - hostRect.left - tipRect.width - 14;
-    if (top + tipRect.height > hostRect.height - 8) top = event.clientY - hostRect.top - tipRect.height - 14;
+    if (left + tipRect.width > hostRect.width - 8)
+      left = event.clientX - hostRect.left - tipRect.width - 14;
+    if (top + tipRect.height > hostRect.height - 8)
+      top = event.clientY - hostRect.top - tipRect.height - 14;
     tip.style.left = `${left}px`;
     tip.style.top = `${top}px`;
     tip.classList.add("visible");
   }
-  function tooltipHide() { document.getElementById("tooltip").classList.remove("visible"); }
+  function tooltipHide() {
+    document.getElementById("tooltip").classList.remove("visible");
+  }
 
   function build() {
     const node = svg.node();
@@ -1818,27 +2227,39 @@ const beeswarmModule = (() => {
 
     if (!nodes) computeNodes();
 
-    const xMin = 2018, xMax = 2108;
-    const x = d3.scaleLinear().domain([xMin, xMax]).range([m.left, width - m.right]);
+    const xMin = 2018,
+      xMax = 2108;
+    const x = d3
+      .scaleLinear()
+      .domain([xMin, xMax])
+      .range([m.left, width - m.right]);
 
     // X axis (only up to 2100)
-    const axisG = g.append("g")
+    const axisG = g
+      .append("g")
       .attr("class", "bee-axis")
       .attr("transform", `translate(0, ${height - m.bottom + 8})`)
-      .call(d3.axisBottom(x).tickValues([2020, 2040, 2060, 2080, 2100]).tickFormat(d3.format("d")));
+      .call(
+        d3
+          .axisBottom(x)
+          .tickValues([2020, 2040, 2060, 2080, 2100])
+          .tickFormat(d3.format("d"))
+      );
     g.append("text")
       .attr("class", "ridge-sublabel")
       .attr("x", (m.left + (width - m.right)) / 2)
       .attr("y", height - m.bottom + 38)
       .attr("text-anchor", "middle")
       .style("font-size", "10px")
-      .text("year each grid cell first crosses +2°C  (right of dashed line: never crosses by 2100)");
+      .text(
+        "year each grid cell first crosses +2°C  (right of dashed line: never crosses by 2100)"
+      );
 
     // Latitude band Y centers (Arctic on top)
     const bandsTopDown = LAT_BANDS.slice().reverse();
     const bandH = (height - m.top - m.bottom) / bandsTopDown.length;
     const bandY = {};
-    bandsTopDown.forEach((b, i) => bandY[b.id] = m.top + bandH * (i + 0.5));
+    bandsTopDown.forEach((b, i) => (bandY[b.id] = m.top + bandH * (i + 0.5)));
 
     // Band labels (left)
     bandsTopDown.forEach((b) => {
@@ -1856,8 +2277,10 @@ const beeswarmModule = (() => {
     const dividerX = x(2102);
     g.append("line")
       .attr("class", "bee-never-divider")
-      .attr("x1", dividerX).attr("x2", dividerX)
-      .attr("y1", m.top - 4).attr("y2", height - m.bottom);
+      .attr("x1", dividerX)
+      .attr("x2", dividerX)
+      .attr("y1", m.top - 4)
+      .attr("y2", height - m.bottom);
     g.append("text")
       .attr("class", "bee-never-label")
       .attr("x", dividerX + 6)
@@ -1865,40 +2288,109 @@ const beeswarmModule = (() => {
       .text("never");
 
     // Assign initial node positions
-    nodes.forEach(n => {
+    nodes.forEach((n) => {
       n.x = x(n.tx);
       n.y = bandY[n.band.id];
     });
 
     // Run a quick force simulation offline
-    const radius = Math.max(1.3, Math.min(2.6, Math.sqrt((width * height) / nodes.length) * 0.13));
-    const sim = d3.forceSimulation(nodes)
+    const radius = Math.max(
+      1.3,
+      Math.min(2.6, Math.sqrt((width * height) / nodes.length) * 0.13)
+    );
+    const sim = d3
+      .forceSimulation(nodes)
       .alpha(0.9)
       .alphaDecay(0.07)
-      .force("x", d3.forceX(d => x(d.tx)).strength(0.95))
-      .force("y", d3.forceY(d => bandY[d.band.id]).strength(0.10))
+      .force("x", d3.forceX((d) => x(d.tx)).strength(0.95))
+      .force("y", d3.forceY((d) => bandY[d.band.id]).strength(0.1))
       .force("collide", d3.forceCollide(radius + 0.15).strength(0.85))
       .stop();
     for (let i = 0; i < 140; i++) sim.tick();
 
     // Draw circles
     const dotG = g.append("g").attr("class", "bee-dots");
-    dotG.selectAll("circle")
+    const dots = dotG
+      .selectAll("circle")
       .data(nodes)
       .join("circle")
       .attr("class", "bee-dot")
-      .attr("cx", d => d.x)
-      .attr("cy", d => d.y)
+      .attr("cx", (d) => d.x)
+      .attr("cy", (d) => d.y)
       .attr("r", radius)
-      .attr("fill", d => d.crossing == null ? "rgba(95, 168, 211, 0.55)" : d.band.color)
+      .attr("fill", (d) =>
+        d.crossing == null ? "rgba(95, 168, 211, 0.55)" : d.band.color
+      )
       .on("mouseover", tooltip)
       .on("mousemove", tooltip)
       .on("mouseout", tooltipHide);
 
+    // ---- Year scrubber: drag to light up the planet as it crosses +2°C ----
+    const total = nodes.length;
+    const scrubG = g.append("g");
+    const scrubLine = scrubG
+      .append("line")
+      .attr("class", "bee-scrub-line")
+      .attr("y1", m.top - 4)
+      .attr("y2", height - m.bottom)
+      .style("opacity", 0);
+    const scrubLabel = scrubG
+      .append("text")
+      .attr("class", "bee-scrub-label")
+      .attr("y", m.top - 8)
+      .attr("text-anchor", "middle")
+      .style("opacity", 0);
+    const readout = scrubG
+      .append("text")
+      .attr("class", "bee-scrub-readout")
+      .attr("x", m.left)
+      .attr("y", 24)
+      .style("opacity", 0);
+
+    function applyScrub(yr) {
+      const crossedByNow = nodes.filter(
+        (n) => n.crossing != null && n.crossing <= yr
+      ).length;
+      const pct = Math.round((crossedByNow / total) * 100);
+      const px = x(yr);
+      scrubLine.attr("x1", px).attr("x2", px).style("opacity", 1);
+      scrubLabel.attr("x", px).text(yr).style("opacity", 1);
+      readout
+        .style("opacity", 1)
+        .text(`By ${yr}, ${pct}% of Earth has crossed +2°C`);
+      dots
+        .classed("bee-dim", (d) => !(d.crossing != null && d.crossing <= yr))
+        .classed("bee-lit", (d) => d.crossing != null && d.crossing <= yr);
+    }
+    function clearScrub() {
+      scrubLine.style("opacity", 0);
+      scrubLabel.style("opacity", 0);
+      readout.style("opacity", 0);
+      dots.classed("bee-dim", false).classed("bee-lit", false);
+    }
+
+    // Track the cursor at the svg level so scrubbing keeps working even when
+    // the pointer is over a dot (events bubble up) — and per-dot tooltips
+    // continue to fire on the dots themselves.
+    svg
+      .style("cursor", "ew-resize")
+      .on("pointermove.scrub", function (event) {
+        const [mx] = d3.pointer(event, g.node());
+        if (mx < m.left || mx > width - m.right) {
+          clearScrub();
+          return;
+        }
+        const yr = Math.max(2020, Math.min(2100, Math.round(x.invert(mx))));
+        applyScrub(yr);
+      })
+      .on("pointerleave.scrub", clearScrub);
+
     built = true;
   }
 
-  function show() { if (!built) build(); }
+  function show() {
+    if (!built) build();
+  }
   return { init, show };
 })();
 
@@ -1928,63 +2420,108 @@ const fanModule = (() => {
 
     const years = data.grid.years;
     const TODAY = 2024;
-    const x = d3.scaleLinear().domain([d3.min(years), d3.max(years)]).range([m.left, width - m.right]);
-    const y = d3.scaleLinear().domain([-1, 6]).range([height - m.bottom, m.top]);
+    const x = d3
+      .scaleLinear()
+      .domain([d3.min(years), d3.max(years)])
+      .range([m.left, width - m.right]);
+    const y = d3
+      .scaleLinear()
+      .domain([-1, 6])
+      .range([height - m.bottom, m.top]);
 
     // Axes
     g.append("g")
       .attr("class", "fan-axis")
       .attr("transform", `translate(0,${height - m.bottom})`)
-      .call(d3.axisBottom(x).tickValues([2020, 2040, 2060, 2080, 2100]).tickFormat(d3.format("d")));
+      .call(
+        d3
+          .axisBottom(x)
+          .tickValues([2020, 2040, 2060, 2080, 2100])
+          .tickFormat(d3.format("d"))
+      );
     g.append("g")
       .attr("class", "fan-axis")
       .attr("transform", `translate(${m.left},0)`)
-      .call(d3.axisLeft(y).ticks(6).tickFormat(d => `${d}°`).tickSize(-(width - m.left - m.right)));
-    g.selectAll(".fan-axis line").attr("class", "gridline").attr("stroke-dasharray", "2 3");
+      .call(
+        d3
+          .axisLeft(y)
+          .ticks(6)
+          .tickFormat((d) => `${d}°`)
+          .tickSize(-(width - m.left - m.right))
+      );
+    g.selectAll(".fan-axis line")
+      .attr("class", "gridline")
+      .attr("stroke-dasharray", "2 3");
 
     // Possibility space (between 126 and 585) — fill from divergence onward
     const lo = data.globalMeans["ssp126"];
     const hi = data.globalMeans["ssp585"];
-    const possibility = years.map((yr, i) => ({ yr, lo: lo[i], hi: hi[i] })).filter(d => d.yr >= TODAY);
-    const possibleArea = d3.area()
-      .x(d => x(d.yr))
-      .y0(d => y(d.lo))
-      .y1(d => y(d.hi))
+    const possibility = years
+      .map((yr, i) => ({ yr, lo: lo[i], hi: hi[i] }))
+      .filter((d) => d.yr >= TODAY);
+    const possibleArea = d3
+      .area()
+      .x((d) => x(d.yr))
+      .y0((d) => y(d.lo))
+      .y1((d) => y(d.hi))
       .curve(d3.curveMonotoneX);
     g.append("path")
       .attr("d", possibleArea(possibility))
       .attr("fill", "url(#possibility-grad)")
       .attr("opacity", 0)
-      .transition().duration(900).attr("opacity", 1);
+      .transition()
+      .duration(900)
+      .attr("opacity", 1);
 
     // Gradient
-    const defs = svg.select("defs").empty() ? svg.append("defs") : svg.select("defs");
+    const defs = svg.select("defs").empty()
+      ? svg.append("defs")
+      : svg.select("defs");
     defs.selectAll("#possibility-grad").remove();
-    const grad = defs.append("linearGradient").attr("id", "possibility-grad")
-      .attr("x1", "0%").attr("x2", "0%").attr("y1", "0%").attr("y2", "100%");
-    grad.append("stop").attr("offset", "0%").attr("stop-color", "var(--bad)").attr("stop-opacity", 0.18);
-    grad.append("stop").attr("offset", "100%").attr("stop-color", "var(--good)").attr("stop-opacity", 0.18);
+    const grad = defs
+      .append("linearGradient")
+      .attr("id", "possibility-grad")
+      .attr("x1", "0%")
+      .attr("x2", "0%")
+      .attr("y1", "0%")
+      .attr("y2", "100%");
+    grad
+      .append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", "var(--bad)")
+      .attr("stop-opacity", 0.18);
+    grad
+      .append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", "var(--good)")
+      .attr("stop-opacity", 0.18);
 
     // Threshold lines
-    [1.5, 2, 3].forEach(t => {
+    [1.5, 2, 3].forEach((t) => {
       g.append("line")
         .attr("class", "threshold-line")
-        .attr("x1", m.left).attr("x2", width - m.right)
-        .attr("y1", y(t)).attr("y2", y(t));
+        .attr("x1", m.left)
+        .attr("x2", width - m.right)
+        .attr("y1", y(t))
+        .attr("y2", y(t));
       g.append("text")
         .attr("class", "threshold-label")
-        .attr("x", m.left + 4).attr("y", y(t) - 4)
+        .attr("x", m.left + 4)
+        .attr("y", y(t) - 4)
         .text(`+${t}°C`);
     });
 
     // Today vertical
     g.append("line")
-      .attr("x1", x(TODAY)).attr("x2", x(TODAY))
-      .attr("y1", m.top).attr("y2", height - m.bottom)
+      .attr("x1", x(TODAY))
+      .attr("x2", x(TODAY))
+      .attr("y1", m.top)
+      .attr("y2", height - m.bottom)
       .attr("stroke", "var(--ink-faint)")
       .attr("stroke-dasharray", "2 3");
     g.append("text")
-      .attr("x", x(TODAY)).attr("y", m.top - 8)
+      .attr("x", x(TODAY))
+      .attr("y", m.top - 8)
       .attr("text-anchor", "middle")
       .style("font-family", "var(--font-mono)")
       .style("font-size", "10px")
@@ -1992,21 +2529,24 @@ const fanModule = (() => {
       .text("today");
 
     // Scenario lines
-    const line = d3.line()
+    const line = d3
+      .line()
       .x((_, i) => x(years[i]))
-      .y(d => y(d))
+      .y((d) => y(d))
       .curve(d3.curveMonotoneX);
 
-    ["ssp585", "ssp245", "ssp126"].forEach(sc => {
+    ["ssp585", "ssp245", "ssp126"].forEach((sc) => {
       const series = data.globalMeans[sc];
-      const path = g.append("path")
+      const path = g
+        .append("path")
         .attr("class", `fan-line fan-line-${sc.slice(-3)}`)
         .attr("d", line(series));
       const totalLen = path.node().getTotalLength();
       path
         .attr("stroke-dasharray", `${totalLen} ${totalLen}`)
         .attr("stroke-dashoffset", totalLen)
-        .transition().duration(1100)
+        .transition()
+        .duration(1100)
         .attr("stroke-dashoffset", 0);
 
       // End label
@@ -2015,7 +2555,14 @@ const fanModule = (() => {
         .attr("class", "fan-scenario-label")
         .attr("x", x(years[years.length - 1]) + 8)
         .attr("y", y(endVal) + 4)
-        .style("fill", sc === "ssp126" ? "var(--good)" : sc === "ssp245" ? "var(--accent-2)" : "var(--bad)")
+        .style(
+          "fill",
+          sc === "ssp126"
+            ? "var(--good)"
+            : sc === "ssp245"
+            ? "var(--accent-2)"
+            : "var(--bad)"
+        )
         .text(`${SCENARIO_LABELS[sc]}: +${endVal.toFixed(1)}°C`);
     });
 
@@ -2036,10 +2583,86 @@ const fanModule = (() => {
       .style("fill", "var(--ink-faint)")
       .text("possibility space");
 
+    // ---- Hover scrubber ----
+    const SCEN = ["ssp126", "ssp245", "ssp585"];
+    const scrubG = g.append("g").style("opacity", 0);
+    const scrubLine = scrubG
+      .append("line")
+      .attr("class", "fan-scrub-line")
+      .attr("y1", m.top)
+      .attr("y2", height - m.bottom);
+    const scrubDots = SCEN.map((sc) =>
+      scrubG
+        .append("circle")
+        .attr("class", "fan-scrub-dot")
+        .attr("r", 4)
+        .attr(
+          "fill",
+          sc === "ssp126"
+            ? "var(--good)"
+            : sc === "ssp245"
+            ? "var(--accent-2)"
+            : "var(--bad)"
+        )
+    );
+
+    g.append("rect")
+      .attr("x", m.left)
+      .attr("y", m.top)
+      .attr("width", width - m.left - m.right)
+      .attr("height", height - m.top - m.bottom)
+      .style("fill", "transparent")
+      .style("cursor", "crosshair")
+      .on("pointermove", function (event) {
+        const [mx] = d3.pointer(event, g.node());
+        const yr = Math.max(
+          years[0],
+          Math.min(years[years.length - 1], Math.round(x.invert(mx)))
+        );
+        const i = years.indexOf(yr);
+        if (i < 0) return;
+        const px = x(yr);
+        scrubG.style("opacity", 1);
+        scrubLine.attr("x1", px).attr("x2", px);
+        SCEN.forEach((sc, k) =>
+          scrubDots[k].attr("cx", px).attr("cy", y(data.globalMeans[sc][i]))
+        );
+        const lo = data.globalMeans["ssp126"][i];
+        const hi = data.globalMeans["ssp585"][i];
+        const rows = ["ssp585", "ssp245", "ssp126"]
+          .map((sc) => {
+            const v = data.globalMeans[sc][i];
+            const col =
+              sc === "ssp126"
+                ? "var(--good)"
+                : sc === "ssp245"
+                ? "var(--accent-2)"
+                : "var(--bad)";
+            return `<div class="tip-row"><span class="tip-key" style="color:${col}">${
+              SCENARIO_LABELS[sc]
+            }</span><span class="tip-val">+${v.toFixed(2)}°C</span></div>`;
+          })
+          .join("");
+        scrollyTip(
+          "panel-fan",
+          event,
+          `<div class="tip-headline" style="font-size:15px">${yr}</div>${rows}` +
+            `<div class="tip-row"><span class="tip-key">spread</span><span class="tip-val">${(
+              hi - lo
+            ).toFixed(2)}°C</span></div>`
+        );
+      })
+      .on("pointerleave", () => {
+        scrubG.style("opacity", 0);
+        scrollyTipHide();
+      });
+
     built = true;
   }
 
-  function show() { if (!built) build(); }
+  function show() {
+    if (!built) build();
+  }
   return { init, show };
 })();
 
@@ -2055,7 +2678,8 @@ const lifetimeModule = (() => {
     const TH = 2.0;
     const years = data.grid.years;
     const findCross = (series) => {
-      for (let i = 0; i < series.length; i++) if (series[i] >= TH) return years[i];
+      for (let i = 0; i < series.length; i++)
+        if (series[i] >= TH) return years[i];
       return null;
     };
 
@@ -2068,14 +2692,20 @@ const lifetimeModule = (() => {
     });
     const r = data.regionalMeans[scenario];
     const named = [
-      { k: "Arctic",        label: "Arctic crosses +2°C",        color: "#7a0a04" },
-      { k: "Europe",        label: "Europe crosses +2°C",        color: "#ff5c2b" },
-      { k: "South Asia",    label: "South Asia crosses +2°C",    color: "#ffaa3d" },
-      { k: "Amazon",        label: "Amazon crosses +2°C",        color: "#88b8c4" },
-      { k: "Antarctic",     label: "Antarctic crosses +2°C",     color: "#5fa8d3" },
+      { k: "Arctic", label: "Arctic crosses +2°C", color: "#7a0a04" },
+      { k: "Europe", label: "Europe crosses +2°C", color: "#ff5c2b" },
+      { k: "South Asia", label: "South Asia crosses +2°C", color: "#ffaa3d" },
+      { k: "Amazon", label: "Amazon crosses +2°C", color: "#88b8c4" },
+      { k: "Antarctic", label: "Antarctic crosses +2°C", color: "#5fa8d3" },
     ];
-    named.forEach(n => {
-      if (r[n.k]) items.push({ key: n.k, label: n.label, year: findCross(r[n.k]), color: n.color });
+    named.forEach((n) => {
+      if (r[n.k])
+        items.push({
+          key: n.k,
+          label: n.label,
+          year: findCross(r[n.k]),
+          color: n.color,
+        });
     });
     return items;
   }
@@ -2096,14 +2726,25 @@ const lifetimeModule = (() => {
         build();
       }
     });
-    document.querySelectorAll("#lifetime-scenario-toggle .seg-btn-mini").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("#lifetime-scenario-toggle .seg-btn-mini").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        scrollyState.lifetimeScenario = btn.dataset.value;
-        build();
+    document
+      .querySelectorAll("#lifetime-scenario-toggle .seg-btn-mini")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document
+            .querySelectorAll("#lifetime-scenario-toggle .seg-btn-mini")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          scrollyState.lifetimeScenario = btn.dataset.value;
+          build();
+        });
       });
-    });
+  }
+
+  // Anomaly the chosen scenario reaches in a given (integer) year
+  function valueAt(scen, year) {
+    const years = data.grid.years;
+    const i = Math.max(0, Math.min(years.length - 1, year - years[0]));
+    return data.globalMeans[scen][i];
   }
 
   function build() {
@@ -2111,165 +2752,324 @@ const lifetimeModule = (() => {
     const { width, height } = node.getBoundingClientRect();
     if (!width || !height) return;
     svg.attr("viewBox", `0 0 ${width} ${height}`);
-    const m = { top: 160, right: 100, bottom: 180, left: 80 };
+    const m = { top: 120, right: 96, bottom: 56, left: 64 };
     dims = { width, height, m };
     g.selectAll("*").remove();
 
     const birth = scrollyState.birthYear;
     const scen = scrollyState.lifetimeScenario;
-    const xMin = Math.min(birth, 2015);
+    const years = data.grid.years;
+    const dataStart = years[0]; // first year we actually have data (≈2015)
     const xMax = 2100;
-    const x = d3.scaleLinear().domain([xMin, xMax]).range([m.left, width - m.right]);
+    const xMin = Math.min(birth, dataStart);
+    const curveStart = Math.max(birth, dataStart); // lived-warming begins here
+    const x = d3
+      .scaleLinear()
+      .domain([xMin, xMax])
+      .range([m.left, width - m.right]);
 
-    const trackY = (m.top + height - m.bottom) / 2;
-    const trackH = 18;
+    const plotTop = m.top,
+      plotBottom = height - m.bottom;
+    const yTop = Math.ceil(
+      d3.max(["ssp126", "ssp245", "ssp585"], (s) => d3.max(data.globalMeans[s]))
+    );
+    const y = d3
+      .scaleLinear()
+      .domain([-0.15, yTop])
+      .range([plotBottom, plotTop]);
 
-    // Gradient defs
-    const defs = svg.select("defs").empty() ? svg.append("defs") : svg.select("defs");
+    // Warming the person has lived through, relative to their birth year
+    const baseAtBirth = valueAt(scen, curveStart);
+
+    // ---- Gradients (time: cool early → hot late) ----
+    const defs = svg.select("defs").empty()
+      ? svg.append("defs")
+      : svg.select("defs");
     defs.selectAll("#life-gradient").remove();
-    const grad = defs.append("linearGradient").attr("id", "life-gradient")
-      .attr("x1", "0%").attr("x2", "100%").attr("y1", "0%").attr("y2", "0%");
+    const grad = defs
+      .append("linearGradient")
+      .attr("id", "life-gradient")
+      .attr("x1", x(curveStart))
+      .attr("x2", x(xMax))
+      .attr("y1", 0)
+      .attr("y2", 0)
+      .attr("gradientUnits", "userSpaceOnUse");
     grad.append("stop").attr("offset", "0%").attr("stop-color", "#5fa8d3");
     grad.append("stop").attr("offset", "40%").attr("stop-color", "#fde29c");
     grad.append("stop").attr("offset", "75%").attr("stop-color", "#ff5c2b");
     grad.append("stop").attr("offset", "100%").attr("stop-color", "#7a0a04");
 
-    // Background track
-    g.append("rect")
-      .attr("class", "life-track-bg")
-      .attr("x", m.left).attr("y", trackY - trackH / 2)
-      .attr("width", width - m.left - m.right).attr("height", trackH)
-      .attr("rx", trackH / 2);
-
-    // Filled lifetime track (birth → 2100)
-    g.append("rect")
-      .attr("class", "life-track-fill")
-      .attr("x", x(birth))
-      .attr("y", trackY - trackH / 2)
-      .attr("width", x(xMax) - x(birth))
-      .attr("height", trackH)
-      .attr("rx", trackH / 2);
-
-    // X axis
+    // ---- Axes ----
     g.append("g")
       .attr("class", "life-axis")
-      .attr("transform", `translate(0, ${trackY + trackH / 2 + 8})`)
+      .attr("transform", `translate(0, ${plotBottom + 6})`)
       .call(d3.axisBottom(x).ticks(8).tickFormat(d3.format("d")));
+    g.append("g")
+      .attr("class", "life-axis life-axis-y")
+      .attr("transform", `translate(${m.left}, 0)`)
+      .call(
+        d3
+          .axisLeft(y)
+          .ticks(5)
+          .tickFormat((d) => `+${d}°`)
+          .tickSize(-(width - m.left - m.right))
+      );
+    g.selectAll(".life-axis-y line")
+      .attr("class", "gridline")
+      .attr("stroke-dasharray", "2 3");
 
-    // Birth marker
-    g.append("circle")
-      .attr("cx", x(birth)).attr("cy", trackY)
-      .attr("r", 8)
-      .attr("fill", "var(--ink)").attr("stroke", "var(--bg)").attr("stroke-width", 3);
-    g.append("text")
-      .attr("class", "life-birth-label")
-      .attr("x", x(birth))
-      .attr("y", trackY - trackH / 2 - 12)
-      .attr("text-anchor", "middle")
-      .text(`born ${birth}`);
+    // +1.5 / +2 reference lines
+    [1.5, 2].forEach((t) => {
+      g.append("line")
+        .attr("class", "life-threshold-line")
+        .attr("x1", m.left)
+        .attr("x2", width - m.right)
+        .attr("y1", y(t))
+        .attr("y2", y(t));
+      g.append("text")
+        .attr("class", "life-eyebrow")
+        .attr("x", width - m.right - 2)
+        .attr("y", y(t) - 5)
+        .attr("text-anchor", "end")
+        .text(`+${t}°C`);
+    });
 
-    // 2100 marker
-    g.append("text")
-      .attr("class", "life-end-label")
-      .attr("x", x(xMax) + 12)
-      .attr("y", trackY + 4)
-      .text(`age ${xMax - birth}`);
-    g.append("text")
-      .attr("class", "life-eyebrow")
-      .attr("x", x(xMax) + 12)
-      .attr("y", trackY + 18)
-      .text("in 2100");
+    // ---- Lifetime warming trajectory ----
+    const pts = years
+      .filter((yr) => yr >= curveStart)
+      .map((yr) => ({ yr, v: valueAt(scen, yr) }));
+    const area = d3
+      .area()
+      .x((d) => x(d.yr))
+      .y0(plotBottom)
+      .y1((d) => y(d.v))
+      .curve(d3.curveMonotoneX);
+    const line = d3
+      .line()
+      .x((d) => x(d.yr))
+      .y((d) => y(d.v))
+      .curve(d3.curveMonotoneX);
 
-    // Header
-    g.append("text")
-      .attr("class", "life-eyebrow")
-      .attr("x", m.left).attr("y", m.top - 28)
-      .text("Your lifetime · " + SCENARIO_LABELS[scen]);
-    g.append("text")
-      .attr("class", "life-age-text")
-      .attr("x", m.left).attr("y", m.top - 6)
-      .style("font-size", "22px")
-      .text(`A life spent under ${data.globalMeans[scen][data.globalMeans[scen].length - 1].toFixed(1)}°C of warming.`);
+    g.append("path")
+      .attr("class", "life-area")
+      .attr("d", area(pts))
+      .attr("fill", "url(#life-gradient)");
+    g.append("path").attr("class", "life-line").attr("d", line(pts));
 
-    // Milestones — sorted by year, then placed in slots above/below the track
-    // to avoid overlap when crossings cluster.
+    // Pre-data hint (birth before our records begin)
+    if (birth < dataStart) {
+      g.append("line")
+        .attr("class", "life-predata")
+        .attr("x1", x(birth))
+        .attr("x2", x(dataStart))
+        .attr("y1", y(baseAtBirth))
+        .attr("y2", y(baseAtBirth));
+      g.append("text")
+        .attr("class", "life-eyebrow")
+        .attr("x", (x(birth) + x(dataStart)) / 2)
+        .attr("y", y(baseAtBirth) - 8)
+        .attr("text-anchor", "middle")
+        .text("before records");
+    }
+
+    // ---- Milestone markers on the curve (packed labels along the top) ----
     const milestones = getMilestones(scen)
-      .filter(m => m.year != null && m.year >= xMin && m.year <= xMax)
+      .filter((d) => d.year != null && d.year >= curveStart && d.year <= xMax)
       .sort((a, b) => a.year - b.year);
-
-    // Lay out milestones in vertical "slots" so labels don't collide.
-    // We use 2 slots above + 2 slots below the track, picking the nearest available slot.
-    const MIN_PX_GAP = 130; // approx label block width
-    const ABOVE_SLOTS = [-50, -116];
-    const BELOW_SLOTS = [50, 116];
-    const slotOccupants = { aboveA: -1e9, aboveB: -1e9, belowA: -1e9, belowB: -1e9 };
-    const slotMap = ["belowA", "aboveA", "belowB", "aboveB"]; // alternation order
-
-    milestones.forEach((mi, i) => {
+    // Two staggered rows so clustered late-century crossings don't overprint.
+    const LABEL_GAP = 92;
+    const rowLastX = [-1e9, -1e9];
+    const rowY = [plotTop + 12, plotTop + 40];
+    milestones.forEach((mi, idx) => {
       const px = x(mi.year);
-      // Pick the slot whose last occupant is farthest left (>= MIN_PX_GAP away).
-      const slotKey = slotMap[i % slotMap.length];
-      const candidates = ["aboveA", "belowA", "aboveB", "belowB"]
-        .map(k => ({ k, lastX: slotOccupants[k] }))
-        .filter(o => px - o.lastX >= MIN_PX_GAP);
-      const chosen = candidates.length
-        ? candidates[0].k
-        : ["aboveA", "belowA", "aboveB", "belowB"].sort((a, b) => slotOccupants[a] - slotOccupants[b])[0];
-      slotOccupants[chosen] = px;
-
-      const above = chosen.startsWith("above");
-      const slotIdx = chosen.endsWith("B") ? 1 : 0;
-      const dy = above ? ABOVE_SLOTS[slotIdx] : BELOW_SLOTS[slotIdx];
-      const lineY1 = trackY + (above ? -trackH / 2 : trackH / 2);
-      const lineY2 = trackY + dy;
-      const age = mi.year - birth;
-
+      const cy = y(valueAt(scen, mi.year));
+      const row = idx % 2;
+      const labelX = Math.min(
+        width - m.right - 6,
+        Math.max(px, rowLastX[row] + LABEL_GAP)
+      );
+      rowLastX[row] = labelX;
+      const ly = rowY[row];
       g.append("line")
         .attr("class", "life-milestone-line")
-        .attr("x1", px).attr("x2", px)
-        .attr("y1", lineY1).attr("y2", lineY2)
+        .attr("x1", px)
+        .attr("x2", px)
+        .attr("y1", cy)
+        .attr("y2", ly + 2)
         .attr("stroke", mi.color);
       g.append("circle")
         .attr("class", "life-milestone-dot")
-        .attr("cx", px).attr("cy", trackY)
-        .attr("r", 5)
+        .attr("cx", px)
+        .attr("cy", cy)
+        .attr("r", 4.5)
         .attr("fill", mi.color);
-      g.append("circle")
-        .attr("cx", px).attr("cy", lineY2)
-        .attr("r", 3.5)
-        .attr("fill", mi.color);
-
-      // Label block: year (big), age, description (small)
-      const yearY = lineY2 + (above ? -10 : 16);
-      const ageY  = lineY2 + (above ? -24 : 30);
-      const descY = lineY2 + (above ? -38 : 44);
-
-      g.append("text")
+      const lg = g.append("g").attr("transform", `translate(${labelX}, ${ly})`);
+      if (labelX !== px) {
+        lg.append("line")
+          .attr("class", "life-milestone-line")
+          .attr("x1", px - labelX)
+          .attr("x2", 0)
+          .attr("y1", 2)
+          .attr("y2", -2)
+          .attr("stroke", mi.color);
+      }
+      lg.append("text")
         .attr("class", "life-milestone-text")
-        .attr("x", px).attr("y", yearY)
         .attr("text-anchor", "middle")
+        .attr("y", -2)
         .style("fill", mi.color)
         .style("font-weight", 600)
-        .text(`${mi.year}`);
-      g.append("text")
+        .text(mi.year);
+      lg.append("text")
         .attr("class", "life-milestone-text")
-        .attr("x", px).attr("y", ageY)
         .attr("text-anchor", "middle")
-        .style("fill", "var(--ink-soft)")
-        .text(age >= 0 ? `age ${age}` : `pre-birth`);
-      g.append("text")
-        .attr("class", "life-milestone-text")
-        .attr("x", px).attr("y", descY)
-        .attr("text-anchor", "middle")
+        .attr("y", -13)
         .style("fill", "var(--ink-faint)")
-        .style("font-size", "9px")
-        .text(mi.label);
+        .style("font-size", "8.5px")
+        .text(mi.label.replace(" crosses +2°C", " +2°C"));
     });
+
+    // ---- Birth handle (draggable) ----
+    const birthHandle = g
+      .append("g")
+      .attr("class", "life-birth-handle")
+      .style("cursor", "ew-resize");
+    birthHandle
+      .append("line")
+      .attr("class", "life-birth-stem")
+      .attr("x1", 0)
+      .attr("x2", 0)
+      .attr("y1", y(baseAtBirth))
+      .attr("y2", plotBottom);
+    birthHandle
+      .append("circle")
+      .attr("cx", 0)
+      .attr("cy", y(baseAtBirth))
+      .attr("r", 7)
+      .attr("fill", "var(--ink)")
+      .attr("stroke", "var(--bg)")
+      .attr("stroke-width", 3);
+    birthHandle
+      .append("text")
+      .attr("class", "life-birth-label")
+      .attr("x", 0)
+      .attr("y", y(baseAtBirth) - 14)
+      .attr("text-anchor", "middle")
+      .text(`born ${birth}`);
+    birthHandle.attr("transform", `translate(${x(birth)},0)`);
+    birthHandle.call(
+      d3.drag().on("drag", (event) => {
+        const yr = Math.max(
+          1930,
+          Math.min(2025, Math.round(x.invert(event.x)))
+        );
+        if (yr !== scrollyState.birthYear) {
+          scrollyState.birthYear = yr;
+          document.getElementById("birth-year-input").value = yr;
+          build();
+        }
+      })
+    );
+
+    // ---- Header / live readout ----
+    g.append("text")
+      .attr("class", "life-eyebrow")
+      .attr("x", m.left)
+      .attr("y", 30)
+      .text(
+        "Your lifetime · " +
+          SCENARIO_LABELS[scen] +
+          " · hover or drag across the chart"
+      );
+    const headline = g
+      .append("text")
+      .attr("class", "life-age-text")
+      .attr("x", m.left)
+      .attr("y", 60)
+      .style("font-size", "24px");
+    const subline = g
+      .append("text")
+      .attr("class", "life-eyebrow")
+      .attr("x", m.left)
+      .attr("y", 84)
+      .style("font-size", "12px")
+      .style("letter-spacing", "0.04em")
+      .style("text-transform", "none")
+      .style("fill", "var(--ink-soft)");
+
+    // ---- Age scrubber (the core interaction) ----
+    const scrub = g.append("g").attr("class", "life-scrub");
+    const scrubLine = scrub
+      .append("line")
+      .attr("class", "life-scrub-line")
+      .attr("y1", plotTop)
+      .attr("y2", plotBottom);
+    const scrubDot = scrub
+      .append("circle")
+      .attr("class", "life-scrub-dot")
+      .attr("r", 6);
+    const scrubBadge = scrub.append("g").attr("class", "life-scrub-badge");
+    const badgeRect = scrubBadge
+      .append("rect")
+      .attr("rx", 5)
+      .attr("height", 20)
+      .attr("y", -28);
+    const badgeText = scrubBadge
+      .append("text")
+      .attr("y", -14)
+      .attr("text-anchor", "middle");
+
+    function setScrub(year) {
+      year = Math.max(curveStart, Math.min(xMax, Math.round(year)));
+      scrollyState.lifeScrubYear = year;
+      const v = valueAt(scen, year);
+      const px = x(year),
+        py = y(v);
+      const age = year - birth;
+      const delta = v - baseAtBirth;
+      scrubLine.attr("x1", px).attr("x2", px);
+      scrubDot.attr("cx", px).attr("cy", py);
+      scrubBadge.attr("transform", `translate(${px}, ${py})`);
+      const label = `age ${age} · ${year}`;
+      badgeText.text(label);
+      const tw = label.length * 6.2 + 16;
+      badgeRect.attr("x", -tw / 2).attr("width", tw);
+      const signed = (n) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(1)}`;
+      headline.text(`At age ${age}, you live in a ${signed(v)}°C world.`);
+      subline.text(
+        delta >= 0.05
+          ? `That's +${delta.toFixed(1)}°C hotter than the year you were born.`
+          : `Right around the warming baseline of your birth year.`
+      );
+    }
+
+    // Interaction surface
+    g.append("rect")
+      .attr("class", "life-scrub-surface")
+      .attr("x", m.left)
+      .attr("y", plotTop)
+      .attr("width", width - m.left - m.right)
+      .attr("height", plotBottom - plotTop)
+      .style("fill", "transparent")
+      .style("cursor", "ew-resize")
+      .call(d3.drag().on("start drag", (event) => setScrub(x.invert(event.x))))
+      .on("pointermove", function (event) {
+        setScrub(x.invert(d3.pointer(event, g.node())[0]));
+      });
+
+    // Park the scrubber at its remembered year (or "today")
+    const initYear =
+      scrollyState.lifeScrubYear != null
+        ? Math.max(curveStart, Math.min(xMax, scrollyState.lifeScrubYear))
+        : Math.max(curveStart, Math.min(xMax, 2025));
+    setScrub(initYear);
 
     built = true;
   }
 
-  function show() { if (!built) build(); }
+  function show() {
+    if (!built) build();
+  }
   return { init, show };
 })();
 
@@ -2280,10 +3080,10 @@ function setupScrollama() {
   const scroller = scrollama();
 
   function activatePanel(step) {
-    document.querySelectorAll(".viz-panel").forEach(p => {
+    document.querySelectorAll(".viz-panel").forEach((p) => {
       p.classList.toggle("active", p.dataset.viz === step);
     });
-    document.querySelectorAll(".step").forEach(s => {
+    document.querySelectorAll(".step").forEach((s) => {
       s.classList.toggle("is-active", s.dataset.step === step);
     });
     scrollyState.activeStep = step;
@@ -2307,7 +3107,7 @@ function setupScrollama() {
       const step = element.dataset.step;
       if (step === "finale") {
         // For the finale step, keep the previous panel showing
-        document.querySelectorAll(".step").forEach(s => {
+        document.querySelectorAll(".step").forEach((s) => {
           s.classList.toggle("is-active", s.dataset.step === "finale");
         });
         return;
