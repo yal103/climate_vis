@@ -2474,7 +2474,7 @@ const fanModule = (() => {
     g.selectAll("*").remove();
 
     const years = data.grid.years;
-    const TODAY = 2024;
+    const TODAY = 2026;
     const x = d3
       .scaleLinear()
       .domain([d3.min(years), d3.max(years)])
