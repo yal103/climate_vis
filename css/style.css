@@ -1327,9 +1327,12 @@ button { font-family: inherit; }
   fill: var(--accent-2);
   pointer-events: none;
 }
-.bee-dot { transition: opacity 0.12s; }
-.bee-dot.bee-dim { opacity: 0.12; }
-.bee-dot.bee-lit { opacity: 1; }
+/* While scrubbing, the parent group dims every dot in a single class write;
+   dots tagged .bee-lit (already crossed) are restored to full opacity. No
+   opacity transition: a scrub can flip thousands of dots at once, and
+   animating that many simultaneous tweens is what made dragging janky. */
+.bee-dots.scrubbing .bee-dot { opacity: 0.12; }
+.bee-dots.scrubbing .bee-dot.bee-lit { opacity: 1; }
 
 /* Act V — fan scrub */
 .fan-scrub-line {
