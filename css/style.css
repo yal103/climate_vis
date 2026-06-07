@@ -938,6 +938,8 @@ body.scroll-locked {
 }
 
 .scroll-graphic {
+  grid-column: 1;
+  grid-row: 1;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -1031,19 +1033,59 @@ body.scroll-locked {
 
 /* Scroll steps */
 .scroll-steps {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  z-index: 1;
   padding: 50vh 0 50vh;
 }
 
 .step {
   min-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 80px 8px 80px 36px;
-  opacity: 0.35;
-  transition: opacity 0.4s ease;
+  padding: 0;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
-.step.is-active { opacity: 1; }
+
+.step-stage {
+  --scrolly-progress: 0;
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 80px 8px 80px 36px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.step-stage-inner {
+  position: relative;
+  width: 100%;
+  max-width: 38ch;
+  min-height: min(58vh, 460px);
+}
+
+.step-copy {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(calc(-50% + 10px));
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0s 0.32s;
+}
+
+.step-copy.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%);
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0s 0s;
+}
 
 .step-eyebrow {
   font-family: var(--font-mono);
@@ -1065,8 +1107,25 @@ body.scroll-locked {
   margin: 0 0 18px;
   color: var(--ink);
 }
+.step-copy h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: italic;
+  font-size: clamp(28px, 3.4vw, 44px);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  margin: 0 0 18px;
+  color: var(--ink);
+}
 
 .step p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+  max-width: 38ch;
+}
+.step-copy p:not(.step-eyebrow) {
   font-size: 16px;
   line-height: 1.6;
   color: var(--ink-soft);
@@ -1077,6 +1136,34 @@ body.scroll-locked {
 .step em {
   font-style: italic;
   color: var(--ink);
+}
+.step-copy em {
+  font-style: italic;
+  color: var(--ink);
+}
+
+.scrolly-progress {
+  position: relative;
+  width: min(100%, 34ch);
+  height: 3px;
+  margin-top: 24px;
+  border-radius: 999px;
+  background: rgba(255, 240, 220, 0.12);
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.step-stage.is-progress-visible .step-copy.is-active .scrolly-progress {
+  opacity: 1;
+}
+.scrolly-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(var(--scrolly-progress));
+  transform-origin: left;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
 }
 
 /* mobile collapse */
@@ -1091,6 +1178,8 @@ body.scroll-locked {
      the steps in z-order, otherwise the text scrolls through the chart and
      intercepts touches meant for the visualization. */
   .scroll-graphic {
+    grid-column: 1;
+    grid-row: 1;
     top: 0;
     height: 56vh;
     height: 56svh;
@@ -1100,18 +1189,35 @@ body.scroll-locked {
     box-shadow: 0 14px 28px -12px rgba(0, 0, 0, 0.75);
   }
   .scroll-steps {
+    grid-column: 1;
+    grid-row: 2;
     position: relative;
     z-index: 1;
     padding: 0 0 26vh;
+  }
+  .step-stage {
+    grid-column: 1;
+    grid-row: 2;
+    top: 56vh;
+    top: 56svh;
+    height: 44vh;
+    height: 44svh;
+    padding: 28px 6px;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+  }
+  .step-stage-inner {
+    min-height: 36vh;
+    min-height: 36svh;
   }
   .step {
     /* Sized so the centered text lands in the reading band (below the
        pinned graphic) while its matching chart is active. */
     min-height: 46vh;
     min-height: 46svh;
-    justify-content: center;
-    padding: 28px 6px;
   }
+  .step-copy h3 { font-size: clamp(24px, 8vw, 34px); }
+  .step-copy p:not(.step-eyebrow) { font-size: 14px; line-height: 1.48; }
   .viz-panel { padding: 12px 12px 12px; }
 
   /* On mobile the act-label flows in-column instead of overlaying the chart,
@@ -1141,6 +1247,23 @@ body.scroll-locked {
     white-space: normal;
   }
   .title-line-2 { margin-left: clamp(24px, 8vw, 80px); }
+}
+
+@media (orientation: portrait), (max-width: 900px) {
+  .scrolly-progress {
+    position: absolute;
+    top: 50%;
+    right: -12px;
+    width: 3px;
+    height: min(72%, 260px);
+    margin-top: 0;
+    transform: translateY(-50%);
+  }
+  .scrolly-progress-fill {
+    transform: scaleY(var(--scrolly-progress));
+    transform-origin: top;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  }
 }
 
 @media (max-width: 560px) {

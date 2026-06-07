@@ -3340,8 +3340,81 @@ const lifetimeModule = (() => {
 // =========================================================
 // SCROLLAMA CONTROLLER
 // =========================================================
+function setupStickyStepStage() {
+  const scrolly = document.getElementById("scrolly");
+  const stepsEl = document.getElementById("scroll-steps");
+  const steps = Array.from(stepsEl.querySelectorAll(".step"));
+
+  let stage = document.getElementById("step-stage");
+  if (!stage) {
+    stage = document.createElement("div");
+    stage.className = "step-stage";
+    stage.id = "step-stage";
+    stage.setAttribute("aria-live", "polite");
+    const inner = document.createElement("div");
+    inner.className = "step-stage-inner";
+    steps.forEach((step) => {
+      const copy = document.createElement("article");
+      copy.className = "step-copy";
+      copy.dataset.step = step.dataset.step;
+      copy.innerHTML = step.innerHTML;
+      copy.insertAdjacentHTML(
+        "beforeend",
+        '<div class="scrolly-progress" aria-hidden="true"><span class="scrolly-progress-fill"></span></div>'
+      );
+      inner.appendChild(copy);
+      step.setAttribute("aria-hidden", "true");
+    });
+    stage.appendChild(inner);
+    scrolly.insertBefore(stage, stepsEl);
+  }
+
+  let activeStep = "stripes";
+  let raf = null;
+  const clamp01 = (value) => Math.max(0, Math.min(1, value));
+
+  function setActive(stepName) {
+    activeStep = stepName;
+    stage.querySelectorAll(".step-copy").forEach((copy) => {
+      copy.classList.toggle("is-active", copy.dataset.step === stepName);
+    });
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const scrollyRect = scrolly.getBoundingClientRect();
+    const isVisible =
+      scrollyRect.top < window.innerHeight * 0.95 &&
+      scrollyRect.bottom > window.innerHeight * 0.05 &&
+      !document.documentElement.classList.contains("is-loading");
+    stage.classList.toggle("is-progress-visible", isVisible);
+
+    const current =
+      steps.find((step) => step.dataset.step === activeStep) || steps[0];
+    const rect = current.getBoundingClientRect();
+    const threshold = window.innerHeight * 0.55;
+    const value = rect.height ? clamp01((threshold - rect.top) / rect.height) : 0;
+    stage.style.setProperty("--scrolly-progress", value.toFixed(3));
+  }
+
+  function scheduleProgressUpdate() {
+    if (raf != null) return;
+    raf = requestAnimationFrame(() => {
+      raf = null;
+      updateProgress();
+    });
+  }
+
+  window.addEventListener("scroll", scheduleProgressUpdate, { passive: true });
+  window.addEventListener("resize", scheduleProgressUpdate);
+  setActive(activeStep);
+
+  return { setActive, updateProgress };
+}
+
 function setupScrollama() {
   const scroller = scrollama();
+  const stickyText = setupStickyStepStage();
   const actModules = {
     stripes: stripesModule,
     map: scrollMapModule,
@@ -3359,6 +3432,7 @@ function setupScrollama() {
       s.classList.toggle("is-active", s.dataset.step === step);
     });
     scrollyState.activeStep = step;
+    stickyText.setActive(step);
 
     const module = actModules[step];
     if (module) {
@@ -3380,6 +3454,8 @@ function setupScrollama() {
         document.querySelectorAll(".step").forEach((s) => {
           s.classList.toggle("is-active", s.dataset.step === "finale");
         });
+        scrollyState.activeStep = "finale";
+        stickyText.setActive("finale");
         return;
       }
       activatePanel(step);
