@@ -303,23 +303,28 @@ button { font-family: inherit; }
   color: var(--ink-soft);
 }
 
-/* ---- Orchestrated load reveal ---- */
+/* ---- Load reveal ----
+   The entire hero fades in as one piece the moment it renders — a pure CSS
+   animation, no JS, no stagger, no waiting on fonts or data. It animates only
+   opacity + transform (GPU-composited), so it stays smooth even while the main
+   thread is busy loading the climate data. Wrapped in prefers-reduced-motion
+   so it's instant for those who ask. */
 @media (prefers-reduced-motion: no-preference) {
-  .masthead, .hero-rule, .dateline, .title-line-1, .title-line-2,
-  .hero-body, .hero-scale, .hero-scroll {
-    animation: hero-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  .hero-inner {
+    /* `backwards` (not `both`) so the resting state is always the visible base
+       style — the animation can never leave the hero stuck hidden. */
+    animation: hero-in 0.5s ease-out backwards;
   }
-  .hero-rule    { animation-delay: 0.06s; }
-  .dateline     { animation-delay: 0.12s; }
-  .title-line-1 { animation-delay: 0.18s; }
-  .title-line-2 { animation-delay: 0.30s; }
-  .hero-body    { animation-delay: 0.46s; }
-  .hero-scale   { animation-delay: 0.58s; }
-  .hero-scroll  { animation-delay: 0.70s; }
 }
-@keyframes hero-rise {
-  from { opacity: 0; transform: translateY(22px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* =========================================================
