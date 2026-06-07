@@ -1643,8 +1643,13 @@ const scrollMapModule = (() => {
     g = svg.append("g").attr("class", "scroll-map-root");
     const ro = new ResizeObserver(() => build());
     ro.observe(svg.node());
-    build();
+    // Fill the legend first so build() measures the SVG's true height
+    // (the legend is a flex sibling that shrinks the chart area). Re-run on the
+    // next frame because the legend wraps/reflows after first paint, which
+    // changes the chart's available height but won't re-fire the observer.
     buildLegend();
+    build();
+    requestAnimationFrame(() => build());
   }
 
   function buildLegend() {
@@ -2148,8 +2153,13 @@ const beeswarmModule = (() => {
     g = svg.append("g").attr("class", "beeswarm-root");
     const ro = new ResizeObserver(() => build());
     ro.observe(svg.node());
-    build();
+    // Fill the legend first so build() measures the SVG's true height
+    // (the legend is a flex sibling that shrinks the chart area). Re-run on the
+    // next frame because the legend wraps/reflows after first paint, which
+    // changes the chart's available height but won't re-fire the observer.
     buildLegend();
+    build();
+    requestAnimationFrame(() => build());
   }
 
   function buildLegend() {
