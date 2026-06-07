@@ -5,10 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>A World on Fire — CMIP6 climate scrollytelling</title>
     <!-- Lock scrolling before first paint; app.js unlocks once the climate
-         data has loaded. -->
+         data and initial charts have loaded. -->
     <script>
+      if ("scrollRestoration" in history) history.scrollRestoration = "manual";
       document.documentElement.classList.add("is-loading");
+      window.scrollTo(0, 0);
     </script>
+    <style>
+      html.is-loading,
+      html.is-loading body {
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+      body.scroll-locked {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        overflow: hidden;
+        touch-action: none;
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,7 +34,7 @@
     />
     <link rel="stylesheet" href="css/style.css" />
   </head>
-  <body>
+  <body class="scroll-locked">
     <!-- ============== HERO ============== -->
     <header class="hero">
       <div class="hero-gridlines" aria-hidden="true"></div>

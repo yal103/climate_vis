@@ -3219,8 +3219,17 @@ function render() {
 // begin". Idempotent.
 function markDataReady() {
   document.documentElement.classList.remove("is-loading");
+  document.body.classList.remove("scroll-locked");
+  document.body.style.top = "";
+  window.scrollTo(0, 0);
   const lbl = document.getElementById("scroll-label");
   if (lbl) lbl.textContent = "Scroll to begin";
+}
+
+function markDataFailed() {
+  document.documentElement.classList.remove("is-loading");
+  document.body.classList.remove("scroll-locked");
+  document.body.style.top = "";
 }
 
 // The interactive dashboard (heavy ~6,000-cell map + side charts).
@@ -3241,8 +3250,13 @@ function ensureDashboard() {
 const nextTick = () => new Promise((r) => setTimeout(r, 0));
 
 async function main() {
-  // Safety net: never leave the page scroll-locked, even if something hangs.
-  const unlockFallback = setTimeout(markDataReady, 25000);
+  // GitHub Pages can be slow to deliver the binary climate data. Keep the
+  // scroll lock active until startup really completes; this timer only updates
+  // the cue so it doesn't look frozen.
+  const loadingNotice = setTimeout(() => {
+    const lbl = document.getElementById("scroll-label");
+    if (lbl) lbl.textContent = "Still loading data…";
+  }, 25000);
   try {
     // Coastlines overlap the data fetch (decorative; they fade in later).
     fetchCoastlines();
@@ -3283,13 +3297,13 @@ async function main() {
     }
 
     // Everything is rendered — unlock scrolling and flip the cue.
-    clearTimeout(unlockFallback);
+    clearTimeout(loadingNotice);
     markDataReady();
   } catch (err) {
     console.error("Failed to start app", err);
     // Unlock scrolling so the page isn't stuck, and surface the error.
-    clearTimeout(unlockFallback);
-    document.documentElement.classList.remove("is-loading");
+    clearTimeout(loadingNotice);
+    markDataFailed();
     const lbl = document.getElementById("scroll-label");
     if (lbl) lbl.textContent = "Failed to load data";
     const el = document.getElementById("scroll-loading");

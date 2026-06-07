@@ -309,7 +309,16 @@ button { font-family: inherit; }
    the data is ready. */
 html.is-loading,
 html.is-loading body {
+  height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+body.scroll-locked {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  overflow: hidden;
+  touch-action: none;
 }
 .is-loading .scroll-label {
   color: var(--accent-2);
