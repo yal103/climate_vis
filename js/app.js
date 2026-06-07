@@ -2347,35 +2347,87 @@ const beeswarmModule = (() => {
       .attr("y", 24)
       .style("opacity", 0);
 
+    // Pre-index for cheap scrubbing. The DOM circles come back in data order,
+    // so circleEls[i] corresponds to nodes[i]. We sort the *crossing* cells by
+    // year once; lighting up to a year is then a binary-search boundary, and
+    // moving the scrub only flips the dots between the old and new boundary —
+    // no full pass over all ~6,000 nodes per mouse move.
+    const circleEls = dots.nodes();
+    const dotGNode = dotG.node();
+    const crossedIdx = d3
+      .range(nodes.length)
+      .filter((i) => nodes[i].crossing != null)
+      .sort((a, b) => nodes[a].crossing - nodes[b].crossing);
+    const crossedYears = crossedIdx.map((i) => nodes[i].crossing);
+
+    let active = false;
+    let boundary = 0; // count of crossed dots currently lit (crossing <= yr)
+    let lastYr = null;
+
+    // Dimming is done with ONE class on the parent group (CSS dims every dot,
+    // then un-dims the ones tagged .bee-lit). So a move only ever writes the
+    // small set of dots that actually flip — never all 6,000.
+    const litOn = (i) => circleEls[i].classList.add("bee-lit");
+    const litOff = (i) => circleEls[i].classList.remove("bee-lit");
+
     function applyScrub(yr) {
-      const crossedByNow = nodes.filter(
-        (n) => n.crossing != null && n.crossing <= yr
-      ).length;
-      const pct = Math.round((crossedByNow / total) * 100);
+      if (yr === lastYr) return; // year-granular: skip redundant mouse moves
+      lastYr = yr;
+      const b = d3.bisectRight(crossedYears, yr);
+
+      if (!active) {
+        dotGNode.classList.add("scrubbing"); // dims all dots in one write
+        for (let k = 0; k < b; k++) litOn(crossedIdx[k]); // light those crossed
+        active = true;
+      } else if (b > boundary) {
+        for (let k = boundary; k < b; k++) litOn(crossedIdx[k]); // newly crossed
+      } else if (b < boundary) {
+        for (let k = b; k < boundary; k++) litOff(crossedIdx[k]); // un-crossed
+      }
+      boundary = b;
+
+      const pct = Math.round((b / total) * 100);
       const px = x(yr);
       scrubLine.attr("x1", px).attr("x2", px).style("opacity", 1);
       scrubLabel.attr("x", px).text(yr).style("opacity", 1);
       readout
         .style("opacity", 1)
         .text(`By ${yr}, ${pct}% of Earth has crossed +2°C`);
-      dots
-        .classed("bee-dim", (d) => !(d.crossing != null && d.crossing <= yr))
-        .classed("bee-lit", (d) => d.crossing != null && d.crossing <= yr);
     }
     function clearScrub() {
       scrubLine.style("opacity", 0);
       scrubLabel.style("opacity", 0);
       readout.style("opacity", 0);
-      dots.classed("bee-dim", false).classed("bee-lit", false);
+      if (active) {
+        dotGNode.classList.remove("scrubbing");
+        for (let k = 0; k < boundary; k++) litOff(crossedIdx[k]); // only the lit ones
+        active = false;
+        boundary = 0;
+        lastYr = null;
+      }
     }
 
     // Track the cursor at the svg level so scrubbing keeps working even when
     // the pointer is over a dot (events bubble up) — and per-dot tooltips
     // continue to fire on the dots themselves.
+    //
+    // Performance: we deliberately do NOT use d3.pointer() here. It calls
+    // getScreenCTM(), which forces a synchronous style+layout recalc — and
+    // because the previous move just changed classes on thousands of dots,
+    // that recalc is expensive, causing the drag jank. Instead we cache the
+    // svg's client rect once per gesture and map clientX → svg-x arithmetically,
+    // so the hot path never reads layout and the class changes only trigger a
+    // cheap, batched opacity repaint.
+    let cachedRect = null;
+    const viewScaleX = () => width / cachedRect.width; // viewBox px per CSS px
     svg
       .style("cursor", "ew-resize")
+      .on("pointerenter.scrub", function () {
+        cachedRect = svg.node().getBoundingClientRect();
+      })
       .on("pointermove.scrub", function (event) {
-        const [mx] = d3.pointer(event, g.node());
+        if (!cachedRect) cachedRect = svg.node().getBoundingClientRect();
+        const mx = (event.clientX - cachedRect.left) * viewScaleX();
         if (mx < m.left || mx > width - m.right) {
           clearScrub();
           return;
@@ -2383,7 +2435,10 @@ const beeswarmModule = (() => {
         const yr = Math.max(2020, Math.min(2100, Math.round(x.invert(mx))));
         applyScrub(yr);
       })
-      .on("pointerleave.scrub", clearScrub);
+      .on("pointerleave.scrub", function () {
+        clearScrub();
+        cachedRect = null;
+      });
 
     built = true;
   }
