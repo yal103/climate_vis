@@ -1248,3 +1248,152 @@ button { font-family: inherit; }
   stroke-width: 1.5;
   stroke-dasharray: 2 3;
 }
+
+/* =========================================================
+   SCROLLY INTERACTIONS (hover / scrub / zoom guides)
+   ========================================================= */
+
+/* Act I — stripes scrub */
+.stripe-guide {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+.stripe-guide-year {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+  pointer-events: none;
+}
+
+/* Act II — map zoom/hover */
+.scroll-map-hint {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+  transition: opacity 0.3s;
+}
+.scroll-map-hint.dim { opacity: 0.25; }
+.map-cell { transition: none; }
+.map-cell.cell-hover {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Act III — ridge scrub */
+.ridge-scrub-line {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+.ridge-scrub-year {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+  pointer-events: none;
+}
+.ridge-scrub-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Act IV — beeswarm scrub */
+.bee-scrub-line {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+.bee-scrub-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+  pointer-events: none;
+}
+.bee-scrub-readout {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  fill: var(--accent-2);
+  pointer-events: none;
+}
+.bee-dot { transition: opacity 0.12s; }
+.bee-dot.bee-dim { opacity: 0.12; }
+.bee-dot.bee-lit { opacity: 1; }
+
+/* Act V — fan scrub */
+.fan-scrub-line {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+.fan-scrub-dot {
+  stroke: var(--bg);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+/* Act V — lifetime trajectory */
+.life-area { opacity: 0.5; }
+.life-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  opacity: 0.85;
+}
+.life-axis-y text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-faint);
+}
+.life-axis-y path { display: none; }
+.life-threshold-line {
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.5;
+}
+.life-predata {
+  stroke: var(--ink-faint);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+}
+.life-birth-stem {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0.5;
+}
+.life-scrub-line {
+  stroke: var(--accent-2);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.life-scrub-dot {
+  fill: var(--accent-2);
+  stroke: var(--bg);
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+.life-scrub-badge rect {
+  fill: var(--accent-2);
+  pointer-events: none;
+}
+.life-scrub-badge text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--bg);
+  pointer-events: none;
+}
