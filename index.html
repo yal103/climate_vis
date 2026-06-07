@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>A World on Fire — CMIP6 climate scrollytelling</title>
+    <!-- Lock scrolling before first paint; app.js unlocks once the climate
+         data has loaded. -->
+    <script>
+      document.documentElement.classList.add("is-loading");
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -89,7 +94,7 @@
         <!-- Scroll cue -->
         <div class="hero-scroll">
           <span class="scroll-rule" aria-hidden="true"></span>
-          <span class="scroll-label">Scroll to begin</span>
+          <span class="scroll-label" id="scroll-label">Loading data…</span>
         </div>
       </div>
     </header>

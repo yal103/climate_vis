@@ -3215,18 +3215,15 @@ function render() {
 // =========================================================
 // BOOTSTRAP
 // =========================================================
-// Run work when the main thread is idle (falls back to a short timeout).
-function idle(fn) {
-  if (typeof requestIdleCallback === "function") {
-    requestIdleCallback(fn, { timeout: 2500 });
-  } else {
-    setTimeout(fn, 200);
-  }
+// Climate data is in: unlock scrolling and flip the hero cue to "Scroll to
+// begin". Idempotent.
+function markDataReady() {
+  document.documentElement.classList.remove("is-loading");
+  const lbl = document.getElementById("scroll-label");
+  if (lbl) lbl.textContent = "Scroll to begin";
 }
 
-// The interactive dashboard (and its heavy ~6,000-cell map) lives far below the
-// fold, so build it only once — when the reader approaches it — instead of at
-// startup.
+// The interactive dashboard (heavy ~6,000-cell map + side charts).
 let dashboardReady = false;
 function ensureDashboard() {
   if (dashboardReady) return;
@@ -3239,43 +3236,27 @@ function ensureDashboard() {
   wireControls();
   render();
 }
-function setupDashboardLazyInit() {
-  const target = document.getElementById("controls");
-  if (target && "IntersectionObserver" in window) {
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          ensureDashboard();
-          io.disconnect();
-        }
-      },
-      { rootMargin: "1400px 0px" } // build well before it scrolls into view
-    );
-    io.observe(target);
-    // Safety net: also build during idle so it's always ready off the critical
-    // path, even if approach-detection is missed.
-    idle(ensureDashboard);
-  } else {
-    ensureDashboard();
-  }
-}
+
+// Yield to the browser so the "Loading data…" cue can repaint between builds.
+const nextTick = () => new Promise((r) => setTimeout(r, 0));
 
 async function main() {
+  // Safety net: never leave the page scroll-locked, even if something hangs.
+  const unlockFallback = setTimeout(markDataReady, 25000);
   try {
-    // Start the coastline fetch immediately so it overlaps the data fetches
-    // (it's a decorative overlay and no longer blocks anything).
+    // Coastlines overlap the data fetch (decorative; they fade in later).
     fetchCoastlines();
 
     await loadData();
 
-    // Hide scroll loading overlay
+    // Hide the in-card loading overlay.
     const scrollLoading = document.getElementById("scroll-loading");
     if (scrollLoading) {
       scrollLoading.classList.add("hidden");
       setTimeout(() => scrollLoading.remove(), 500);
     }
 
-    // Init scrolly modules — cheap now: each chart builds lazily on first show.
+    // Init every module (cheap)…
     stripesModule.init();
     scrollMapModule.init();
     ridgeModule.init();
@@ -3284,18 +3265,33 @@ async function main() {
     lifetimeModule.init();
     setupScrollama();
 
-    // Build only the act that's actually on screen.
-    stripesModule.show();
+    // …then BUILD every visualization while the page is still scroll-locked, so
+    // the reader can never scroll into a half-built chart. Yielding between each
+    // build keeps the "Loading data…" cue animating instead of freezing.
+    const builds = [
+      () => stripesModule.show(),
+      () => scrollMapModule.show(),
+      () => ridgeModule.show(),
+      () => beeswarmModule.show(),
+      () => fanModule.show(),
+      () => lifetimeModule.show(),
+      () => ensureDashboard(),
+    ];
+    for (const build of builds) {
+      build();
+      await nextTick();
+    }
 
-    // Everything below the fold is deferred off the critical path.
-    setupDashboardLazyInit();
-
-    // Pre-warm the heavy acts during idle time so scrolling to them is smooth
-    // (the beeswarm runs a force simulation; the map draws ~6,000 cells).
-    idle(() => beeswarmModule.show());
-    idle(() => scrollMapModule.show());
+    // Everything is rendered — unlock scrolling and flip the cue.
+    clearTimeout(unlockFallback);
+    markDataReady();
   } catch (err) {
     console.error("Failed to start app", err);
+    // Unlock scrolling so the page isn't stuck, and surface the error.
+    clearTimeout(unlockFallback);
+    document.documentElement.classList.remove("is-loading");
+    const lbl = document.getElementById("scroll-label");
+    if (lbl) lbl.textContent = "Failed to load data";
     const el = document.getElementById("scroll-loading");
     if (el) el.textContent = `error: ${err.message}`;
     const el2 = document.getElementById("map-loading");
