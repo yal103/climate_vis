@@ -537,8 +537,11 @@ function showTooltip(event, d) {
     </div>
   `;
 
-  // Position
+  // Position. The scrolly acts re-parent this single #tooltip element into
+  // their own panels, so bring it back into .map-wrap before positioning it
+  // relative to that wrap — otherwise it lands off-screen in a scrolly panel.
   const wrap = document.querySelector(".map-wrap");
+  if (tip.parentElement !== wrap) wrap.appendChild(tip);
   const wrapRect = wrap.getBoundingClientRect();
   const tipRect = tip.getBoundingClientRect();
   let left = event.clientX - wrapRect.left + 14;
