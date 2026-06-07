@@ -68,30 +68,32 @@ async function loadData() {
   const tsBuf = await tsResp.arrayBuffer();
   parseTimeseries(tsBuf);
 
-  // Fetch world coastlines — try real Natural Earth (world-atlas CDN) first,
-  // fall back to the local synthetic GeoJSON if offline / CDN blocked.
-  overlay.textContent = "Loading map…";
+  overlay.classList.add("hidden");
+  setTimeout(() => overlay.remove(), 500);
+}
+
+// Coastlines are NOT on the critical path. The maps draw their data cells
+// immediately; the borders are a decorative overlay that fades in whenever this
+// resolves. Fetching them here (instead of inside loadData) means a slow CDN
+// can never hold up the rest of the page. Try Natural Earth via CDN, fall back
+// to a bundled local copy.
+async function fetchCoastlines() {
   try {
     const topo = await d3.json(
       "https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json"
     );
-    // topojson-client converts topology → GeoJSON FeatureCollection
     data.worldGeo = topojson.feature(topo, topo.objects.land);
-    console.log("Loaded Natural Earth coastlines from CDN");
   } catch (e) {
-    console.warn(
-      "CDN coastlines unavailable, using local fallback:",
-      e.message
-    );
     try {
       data.worldGeo = await d3.json("data/coastlines.json");
     } catch (e2) {
       console.warn("No coastlines available:", e2.message);
+      return;
     }
   }
-
-  overlay.classList.add("hidden");
-  setTimeout(() => overlay.remove(), 500);
+  // Redraw any map that was already built without borders.
+  scrollMapModule.onCoastlines();
+  mapModule.onCoastlines();
 }
 
 function parseTimeseries(buf) {
@@ -212,6 +214,7 @@ const anomalyScale = makeAnomalyScale();
 const mapModule = (() => {
   let svg, gMap, gCells, gCoast, gGratic, gSphere, gSelection;
   let projection, path;
+  let built = false;
   let cellsSel = null;
   let cachedDims = null;
 
@@ -287,6 +290,15 @@ const mapModule = (() => {
     // Cells: render as rectangles in projected space.
     // We pre-project each grid cell to a polygon (4 corners).
     buildCells();
+    built = true;
+  }
+
+  // Coastlines arrived after the map was already drawn — repaint borders + cells.
+  function onCoastlines() {
+    if (built) {
+      build();
+      update();
+    }
   }
 
   function buildCells() {
@@ -464,7 +476,7 @@ const mapModule = (() => {
     render();
   }
 
-  return { init, update, build };
+  return { init, update, build, onCoastlines };
 })();
 
 // =========================================================
@@ -1410,11 +1422,10 @@ const stripesModule = (() => {
   function init() {
     svg = d3.select("#stripes-svg");
     g = svg.append("g").attr("class", "stripes-root");
-    const ro = new ResizeObserver(() => {
-      build();
-    });
+    const ro = new ResizeObserver(() => { if (stripesBuilt) build(); });
     ro.observe(svg.node());
-    build();
+    // First build is triggered explicitly via show() — stripes is the one act
+    // visible at load.
   }
 
   function build() {
@@ -1641,15 +1652,15 @@ const scrollMapModule = (() => {
   function init() {
     svg = d3.select("#scroll-map");
     g = svg.append("g").attr("class", "scroll-map-root");
-    const ro = new ResizeObserver(() => build());
+    // Only rebuild on resize once this act has actually been built — the
+    // observer's initial fire must NOT build it (that's deferred to show()).
+    const ro = new ResizeObserver(() => { if (built) build(); });
     ro.observe(svg.node());
-    // Fill the legend first so build() measures the SVG's true height
-    // (the legend is a flex sibling that shrinks the chart area). Re-run on the
-    // next frame because the legend wraps/reflows after first paint, which
-    // changes the chart's available height but won't re-fire the observer.
-    buildLegend();
-    build();
-    requestAnimationFrame(() => build());
+    buildLegend(); // cheap; ready before the chart is built
+  }
+
+  function onCoastlines() {
+    if (built) build();
   }
 
   function buildLegend() {
@@ -1897,9 +1908,14 @@ const scrollMapModule = (() => {
   }
 
   function show() {
-    if (!built) build();
+    if (!built) {
+      build();
+      // Legend can wrap/reflow after first paint and shrink the chart; rebuild
+      // once on the next frame so the viewBox matches the final height.
+      requestAnimationFrame(() => build());
+    }
   }
-  return { init, show };
+  return { init, show, onCoastlines };
 })();
 
 // =========================================================
@@ -1925,9 +1941,8 @@ const ridgeModule = (() => {
   function init() {
     svg = d3.select("#ridge-svg");
     g = svg.append("g").attr("class", "ridge-root");
-    const ro = new ResizeObserver(() => build());
+    const ro = new ResizeObserver(() => { if (built) build(); });
     ro.observe(svg.node());
-    build();
   }
 
   function build() {
@@ -2151,15 +2166,11 @@ const beeswarmModule = (() => {
   function init() {
     svg = d3.select("#beeswarm-svg");
     g = svg.append("g").attr("class", "beeswarm-root");
-    const ro = new ResizeObserver(() => build());
+    // Deferred build: the observer's initial fire must not run the (expensive)
+    // force simulation — that happens on first show().
+    const ro = new ResizeObserver(() => { if (built) build(); });
     ro.observe(svg.node());
-    // Fill the legend first so build() measures the SVG's true height
-    // (the legend is a flex sibling that shrinks the chart area). Re-run on the
-    // next frame because the legend wraps/reflows after first paint, which
-    // changes the chart's available height but won't re-fire the observer.
-    buildLegend();
-    build();
-    requestAnimationFrame(() => build());
+    buildLegend(); // cheap; ready before the chart is built
   }
 
   function buildLegend() {
@@ -2457,7 +2468,12 @@ const beeswarmModule = (() => {
   }
 
   function show() {
-    if (!built) build();
+    if (!built) {
+      build();
+      // Legend can wrap/reflow after first paint and shrink the chart; rebuild
+      // once on the next frame so the viewBox matches the final height.
+      requestAnimationFrame(() => build());
+    }
   }
   return { init, show };
 })();
@@ -2472,9 +2488,8 @@ const fanModule = (() => {
   function init() {
     svg = d3.select("#fan-svg");
     g = svg.append("g").attr("class", "fan-root");
-    const ro = new ResizeObserver(() => build());
+    const ro = new ResizeObserver(() => { if (built) build(); });
     ro.observe(svg.node());
-    build();
   }
 
   function build() {
@@ -2781,9 +2796,8 @@ const lifetimeModule = (() => {
   function init() {
     svg = d3.select("#lifetime-svg");
     g = svg.append("g").attr("class", "lifetime-root");
-    const ro = new ResizeObserver(() => build());
+    const ro = new ResizeObserver(() => { if (built) build(); });
     ro.observe(svg.node());
-    build();
 
     // Wire up controls
     const input = document.getElementById("birth-year-input");
@@ -3201,8 +3215,57 @@ function render() {
 // =========================================================
 // BOOTSTRAP
 // =========================================================
+// Run work when the main thread is idle (falls back to a short timeout).
+function idle(fn) {
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(fn, { timeout: 2500 });
+  } else {
+    setTimeout(fn, 200);
+  }
+}
+
+// The interactive dashboard (and its heavy ~6,000-cell map) lives far below the
+// fold, so build it only once — when the reader approaches it — instead of at
+// startup.
+let dashboardReady = false;
+function ensureDashboard() {
+  if (dashboardReady) return;
+  dashboardReady = true;
+  legendModule.init();
+  mapModule.init();
+  globalChartModule.init();
+  cellChartModule.init();
+  histogramModule.init();
+  wireControls();
+  render();
+}
+function setupDashboardLazyInit() {
+  const target = document.getElementById("controls");
+  if (target && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          ensureDashboard();
+          io.disconnect();
+        }
+      },
+      { rootMargin: "1400px 0px" } // build well before it scrolls into view
+    );
+    io.observe(target);
+    // Safety net: also build during idle so it's always ready off the critical
+    // path, even if approach-detection is missed.
+    idle(ensureDashboard);
+  } else {
+    ensureDashboard();
+  }
+}
+
 async function main() {
   try {
+    // Start the coastline fetch immediately so it overlaps the data fetches
+    // (it's a decorative overlay and no longer blocks anything).
+    fetchCoastlines();
+
     await loadData();
 
     // Hide scroll loading overlay
@@ -3212,7 +3275,7 @@ async function main() {
       setTimeout(() => scrollLoading.remove(), 500);
     }
 
-    // Init scrolly modules
+    // Init scrolly modules — cheap now: each chart builds lazily on first show.
     stripesModule.init();
     scrollMapModule.init();
     ridgeModule.init();
@@ -3221,14 +3284,16 @@ async function main() {
     lifetimeModule.init();
     setupScrollama();
 
-    // Init dashboard modules (finale)
-    legendModule.init();
-    mapModule.init();
-    globalChartModule.init();
-    cellChartModule.init();
-    histogramModule.init();
-    wireControls();
-    render();
+    // Build only the act that's actually on screen.
+    stripesModule.show();
+
+    // Everything below the fold is deferred off the critical path.
+    setupDashboardLazyInit();
+
+    // Pre-warm the heavy acts during idle time so scrolling to them is smooth
+    // (the beeswarm runs a force simulation; the map draws ~6,000 cells).
+    idle(() => beeswarmModule.show());
+    idle(() => scrollMapModule.show());
   } catch (err) {
     console.error("Failed to start app", err);
     const el = document.getElementById("scroll-loading");
