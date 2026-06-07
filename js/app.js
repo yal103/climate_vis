@@ -1411,6 +1411,13 @@ function buildCellList(scenario, threshold) {
   return out;
 }
 
+function prefersReducedMotion() {
+  return (
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 // =========================================================
 // ACT I — WARMING STRIPES
 // =========================================================
@@ -1418,11 +1425,14 @@ const stripesModule = (() => {
   let svg, g, dims;
   const SCENARIOS = ["ssp126", "ssp245", "ssp585"];
   let stripesBuilt = false;
+  let stripesRevealed = false;
 
   function init() {
     svg = d3.select("#stripes-svg");
     g = svg.append("g").attr("class", "stripes-root");
-    const ro = new ResizeObserver(() => { if (stripesBuilt) build(); });
+    const ro = new ResizeObserver(() => {
+      if (stripesBuilt) build();
+    });
     ro.observe(svg.node());
     // First build is triggered explicitly via show() — stripes is the one act
     // visible at load.
@@ -1500,11 +1510,7 @@ const stripesModule = (() => {
         .attr("width", w + 0.6)
         .attr("height", rowH - 8)
         .attr("fill", (d) => stripeColor(d.anom))
-        .style("opacity", 0)
-        .transition()
-        .delay((d, i) => i * 6 + rowIdx * 80)
-        .duration(400)
-        .style("opacity", 1);
+        .style("opacity", stripesRevealed ? 1 : 0);
 
       // End-of-row label: 2100 value
       const endVal = series[series.length - 1];
@@ -1543,6 +1549,10 @@ const stripesModule = (() => {
       .attr("x", divX + 4)
       .attr("y", startY + totalRowsH + 36)
       .text("today");
+
+    g.selectAll(
+      ".stripe-axis, .stripe-row-label, .stripe-divider-line, .stripe-divider-text"
+    ).style("opacity", stripesRevealed ? null : 0);
 
     // ---- Interactive hover-scrub ----
     const w = (width - m.right - m.left) / years.length;
@@ -1604,7 +1614,30 @@ const stripesModule = (() => {
   function show() {
     if (!stripesBuilt) build();
   }
-  return { init, show, build };
+  function reveal() {
+    if (stripesRevealed) return;
+    stripesRevealed = true;
+    const totalYears = data.grid.years.length;
+    if (prefersReducedMotion()) {
+      g.selectAll(".stripe-rect").style("opacity", 1);
+      g.selectAll(
+        ".stripe-axis, .stripe-row-label, .stripe-divider-line, .stripe-divider-text"
+      ).style("opacity", null);
+      return;
+    }
+    g.selectAll(
+      ".stripe-axis, .stripe-row-label, .stripe-divider-line, .stripe-divider-text"
+    )
+      .transition()
+      .duration(320)
+      .style("opacity", 1);
+    g.selectAll(".stripe-rect")
+      .transition()
+      .delay((d, i) => (i % totalYears) * 5 + Math.floor(i / totalYears) * 80)
+      .duration(360)
+      .style("opacity", 1);
+  }
+  return { init, show, build, reveal };
 })();
 
 // =========================================================
@@ -1613,6 +1646,7 @@ const stripesModule = (() => {
 const scrollMapModule = (() => {
   let svg, g, gZoom, dims, projection, path, zoom;
   let built = false;
+  let revealed = false;
 
   const ANNOTATIONS = [
     {
@@ -1654,7 +1688,9 @@ const scrollMapModule = (() => {
     g = svg.append("g").attr("class", "scroll-map-root");
     // Only rebuild on resize once this act has actually been built — the
     // observer's initial fire must NOT build it (that's deferred to show()).
-    const ro = new ResizeObserver(() => { if (built) build(); });
+    const ro = new ResizeObserver(() => {
+      if (built) build();
+    });
     ro.observe(svg.node());
     buildLegend(); // cheap; ready before the chart is built
   }
@@ -1768,6 +1804,7 @@ const scrollMapModule = (() => {
           .attr("d", d)
           .attr("class", v === null ? "map-cell never" : "map-cell")
           .attr("fill", v === null ? null : crossingScale(v))
+          .style("opacity", revealed ? 1 : 0)
           .datum({ lat, lon, idx, crossing: v })
           .on("pointerenter", onCellEnter)
           .on("pointermove", onCellMove)
@@ -1873,7 +1910,10 @@ const scrollMapModule = (() => {
       .attr("x", width - 16)
       .attr("y", height - 14)
       .attr("text-anchor", "end")
+      .style("opacity", revealed ? null : 0)
       .text("scroll to zoom · drag to pan · double-click to reset");
+
+    if (!revealed) annoG.style("opacity", 0);
 
     built = true;
   }
@@ -1915,7 +1955,37 @@ const scrollMapModule = (() => {
       requestAnimationFrame(() => build());
     }
   }
-  return { init, show, onCoastlines };
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    if (prefersReducedMotion()) {
+      gZoom.selectAll(".scroll-map-cells .map-cell").style("opacity", 1);
+      gZoom.select(".scroll-map-annos").style("opacity", null);
+      g.select("#scroll-map-hint").style("opacity", null);
+      return;
+    }
+    gZoom
+      .selectAll(".scroll-map-cells .map-cell")
+      .transition()
+      .delay((d) => {
+        const lon = d.lon > 180 ? d.lon - 360 : d.lon;
+        return ((lon + 180) / 360) * 850;
+      })
+      .duration(420)
+      .style("opacity", 1);
+    gZoom
+      .select(".scroll-map-annos")
+      .transition()
+      .delay(760)
+      .duration(520)
+      .style("opacity", 1);
+    g.select("#scroll-map-hint")
+      .transition()
+      .delay(980)
+      .duration(360)
+      .style("opacity", 1);
+  }
+  return { init, show, reveal, onCoastlines };
 })();
 
 // =========================================================
@@ -1924,6 +1994,7 @@ const scrollMapModule = (() => {
 const ridgeModule = (() => {
   let svg, g, dims;
   let built = false;
+  let revealed = false;
 
   // Kernel density estimator
   function kde(kernel, bandwidth, sampleX) {
@@ -1941,7 +2012,9 @@ const ridgeModule = (() => {
   function init() {
     svg = d3.select("#ridge-svg");
     g = svg.append("g").attr("class", "ridge-root");
-    const ro = new ResizeObserver(() => { if (built) build(); });
+    const ro = new ResizeObserver(() => {
+      if (built) build();
+    });
     ro.observe(svg.node());
   }
 
@@ -2074,11 +2147,8 @@ const ridgeModule = (() => {
         .attr("d", area(density))
         .attr("fill", band.color)
         .attr("stroke", band.color)
-        .style("opacity", 0)
-        .transition()
-        .delay(rowIdx * 90)
-        .duration(700)
-        .style("opacity", 1);
+        .attr("transform", revealed ? null : "translate(-14,0)")
+        .style("opacity", revealed ? 1 : 0);
 
       // Median tick
       const sorted = crossed.slice().sort(d3.ascending);
@@ -2152,7 +2222,22 @@ const ridgeModule = (() => {
   function show() {
     if (!built) build();
   }
-  return { init, show };
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    if (prefersReducedMotion()) {
+      g.selectAll(".ridge-path").attr("transform", null).style("opacity", 1);
+      return;
+    }
+    g.selectAll(".ridge-path")
+      .transition()
+      .delay((d, i) => i * 120)
+      .duration(700)
+      .ease(d3.easeCubicOut)
+      .attr("transform", "translate(0,0)")
+      .style("opacity", 1);
+  }
+  return { init, show, reveal };
 })();
 
 // =========================================================
@@ -2161,6 +2246,7 @@ const ridgeModule = (() => {
 const beeswarmModule = (() => {
   let svg, g, dims;
   let built = false;
+  let revealed = false;
   let nodes = null;
 
   function init() {
@@ -2168,7 +2254,9 @@ const beeswarmModule = (() => {
     g = svg.append("g").attr("class", "beeswarm-root");
     // Deferred build: the observer's initial fire must not run the (expensive)
     // force simulation — that happens on first show().
-    const ro = new ResizeObserver(() => { if (built) build(); });
+    const ro = new ResizeObserver(() => {
+      if (built) build();
+    });
     ro.observe(svg.node());
     buildLegend(); // cheap; ready before the chart is built
   }
@@ -2341,10 +2429,12 @@ const beeswarmModule = (() => {
       .attr("class", "bee-dot")
       .attr("cx", (d) => d.x)
       .attr("cy", (d) => d.y)
-      .attr("r", radius)
+      .attr("r", revealed ? radius : 0)
+      .attr("data-r", radius)
       .attr("fill", (d) =>
         d.crossing == null ? "rgba(95, 168, 211, 0.55)" : d.band.color
       )
+      .style("opacity", revealed ? 1 : 0)
       .on("mouseover", tooltip)
       .on("mousemove", tooltip)
       .on("mouseout", tooltipHide);
@@ -2475,7 +2565,29 @@ const beeswarmModule = (() => {
       requestAnimationFrame(() => build());
     }
   }
-  return { init, show };
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    const dots = g.selectAll(".bee-dot");
+    if (prefersReducedMotion()) {
+      dots
+        .attr("r", function () {
+          return +this.getAttribute("data-r");
+        })
+        .style("opacity", 1);
+      return;
+    }
+    dots
+      .transition()
+      .delay((d) => ((d.tx - 2018) / (2108 - 2018)) * 900)
+      .duration(420)
+      .ease(d3.easeCubicOut)
+      .attr("r", function () {
+        return +this.getAttribute("data-r");
+      })
+      .style("opacity", 1);
+  }
+  return { init, show, reveal };
 })();
 
 // =========================================================
@@ -2484,11 +2596,14 @@ const beeswarmModule = (() => {
 const fanModule = (() => {
   let svg, g, dims;
   let built = false;
+  let revealed = false;
 
   function init() {
     svg = d3.select("#fan-svg");
     g = svg.append("g").attr("class", "fan-root");
-    const ro = new ResizeObserver(() => { if (built) build(); });
+    const ro = new ResizeObserver(() => {
+      if (built) build();
+    });
     ro.observe(svg.node());
   }
 
@@ -2549,12 +2664,10 @@ const fanModule = (() => {
       .y1((d) => y(d.hi))
       .curve(d3.curveMonotoneX);
     g.append("path")
+      .attr("class", "fan-possibility-area")
       .attr("d", possibleArea(possibility))
       .attr("fill", "url(#possibility-grad)")
-      .attr("opacity", 0)
-      .transition()
-      .duration(900)
-      .attr("opacity", 1);
+      .attr("opacity", revealed ? 1 : 0);
 
     // Gradient
     const defs = svg.select("defs").empty()
@@ -2627,10 +2740,8 @@ const fanModule = (() => {
       const totalLen = path.node().getTotalLength();
       path
         .attr("stroke-dasharray", `${totalLen} ${totalLen}`)
-        .attr("stroke-dashoffset", totalLen)
-        .transition()
-        .duration(1100)
-        .attr("stroke-dashoffset", 0);
+        .attr("data-length", totalLen)
+        .attr("stroke-dashoffset", revealed ? 0 : totalLen);
 
       // End label
       const endVal = series[series.length - 1];
@@ -2646,6 +2757,7 @@ const fanModule = (() => {
             ? "var(--accent-2)"
             : "var(--bad)"
         )
+        .style("opacity", revealed ? 1 : 0)
         .text(`${SCENARIO_LABELS[sc]}: +${endVal.toFixed(1)}°C`);
     });
 
@@ -2656,14 +2768,17 @@ const fanModule = (() => {
       .attr("x", x(2090))
       .attr("y", y((hi[hi.length - 1] + lo[lo.length - 1]) / 2))
       .attr("text-anchor", "middle")
+      .style("opacity", revealed ? 1 : 0)
       .text(`Δ ${gap.toFixed(1)}°C`);
     g.append("text")
+      .attr("class", "fan-divergence-note")
       .attr("x", x(2090))
       .attr("y", y((hi[hi.length - 1] + lo[lo.length - 1]) / 2) + 16)
       .attr("text-anchor", "middle")
       .style("font-family", "var(--font-mono)")
       .style("font-size", "10px")
       .style("fill", "var(--ink-faint)")
+      .style("opacity", revealed ? 1 : 0)
       .text("possibility space");
 
     // ---- Hover scrubber ----
@@ -2746,7 +2861,37 @@ const fanModule = (() => {
   function show() {
     if (!built) build();
   }
-  return { init, show };
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    if (prefersReducedMotion()) {
+      g.select(".fan-possibility-area").attr("opacity", 1);
+      g.selectAll(".fan-line").attr("stroke-dashoffset", 0);
+      g.selectAll(
+        ".fan-scenario-label, .fan-divergence-anno, .fan-divergence-note"
+      ).style("opacity", 1);
+      return;
+    }
+    g.select(".fan-possibility-area")
+      .transition()
+      .delay(250)
+      .duration(760)
+      .attr("opacity", 1);
+    g.selectAll(".fan-line")
+      .transition()
+      .delay((d, i) => i * 140)
+      .duration(1050)
+      .ease(d3.easeCubicInOut)
+      .attr("stroke-dashoffset", 0);
+    g.selectAll(
+      ".fan-scenario-label, .fan-divergence-anno, .fan-divergence-note"
+    )
+      .transition()
+      .delay(950)
+      .duration(420)
+      .style("opacity", 1);
+  }
+  return { init, show, reveal };
 })();
 
 // =========================================================
@@ -2755,6 +2900,7 @@ const fanModule = (() => {
 const lifetimeModule = (() => {
   let svg, g, dims;
   let built = false;
+  let revealed = false;
 
   // Compute first crossing of +2°C for various reference series
   function getMilestones(scenario) {
@@ -2796,7 +2942,9 @@ const lifetimeModule = (() => {
   function init() {
     svg = d3.select("#lifetime-svg");
     g = svg.append("g").attr("class", "lifetime-root");
-    const ro = new ResizeObserver(() => { if (built) build(); });
+    const ro = new ResizeObserver(() => {
+      if (built) build();
+    });
     ro.observe(svg.node());
 
     // Wire up controls
@@ -2935,8 +3083,16 @@ const lifetimeModule = (() => {
     g.append("path")
       .attr("class", "life-area")
       .attr("d", area(pts))
-      .attr("fill", "url(#life-gradient)");
-    g.append("path").attr("class", "life-line").attr("d", line(pts));
+      .attr("fill", "url(#life-gradient)")
+      .style("opacity", revealed ? null : 0);
+    const lifeLinePath = g
+      .append("path")
+      .attr("class", "life-line")
+      .attr("d", line(pts));
+    const lifeLineLen = lifeLinePath.node().getTotalLength();
+    lifeLinePath
+      .attr("stroke-dasharray", `${lifeLineLen} ${lifeLineLen}`)
+      .attr("stroke-dashoffset", revealed ? 0 : lifeLineLen);
 
     // Pre-data hint (birth before our records begin)
     if (birth < dataStart) {
@@ -2973,19 +3129,22 @@ const lifetimeModule = (() => {
       rowLastX[row] = labelX;
       const ly = rowY[row];
       g.append("line")
-        .attr("class", "life-milestone-line")
+        .attr("class", "life-milestone-line life-milestone-mark")
         .attr("x1", px)
         .attr("x2", px)
         .attr("y1", cy)
         .attr("y2", ly + 2)
         .attr("stroke", mi.color);
       g.append("circle")
-        .attr("class", "life-milestone-dot")
+        .attr("class", "life-milestone-dot life-milestone-mark")
         .attr("cx", px)
         .attr("cy", cy)
         .attr("r", 4.5)
         .attr("fill", mi.color);
-      const lg = g.append("g").attr("transform", `translate(${labelX}, ${ly})`);
+      const lg = g
+        .append("g")
+        .attr("class", "life-milestone-mark")
+        .attr("transform", `translate(${labelX}, ${ly})`);
       if (labelX !== px) {
         lg.append("line")
           .attr("class", "life-milestone-line")
@@ -3146,13 +3305,36 @@ const lifetimeModule = (() => {
         : Math.max(curveStart, Math.min(xMax, 2025));
     setScrub(initYear);
 
+    g.selectAll(".life-milestone-mark").style("opacity", revealed ? 1 : 0);
+
     built = true;
   }
 
   function show() {
     if (!built) build();
   }
-  return { init, show };
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    if (prefersReducedMotion()) {
+      g.select(".life-area").style("opacity", null);
+      g.select(".life-line").attr("stroke-dashoffset", 0);
+      g.selectAll(".life-milestone-mark").style("opacity", 1);
+      return;
+    }
+    g.select(".life-area").transition().duration(760).style("opacity", 0.5);
+    g.select(".life-line")
+      .transition()
+      .duration(1100)
+      .ease(d3.easeCubicInOut)
+      .attr("stroke-dashoffset", 0);
+    g.selectAll(".life-milestone-mark")
+      .transition()
+      .delay((d, i) => 760 + i * 55)
+      .duration(300)
+      .style("opacity", 1);
+  }
+  return { init, show, reveal };
 })();
 
 // =========================================================
@@ -3160,6 +3342,14 @@ const lifetimeModule = (() => {
 // =========================================================
 function setupScrollama() {
   const scroller = scrollama();
+  const actModules = {
+    stripes: stripesModule,
+    map: scrollMapModule,
+    ridge: ridgeModule,
+    beeswarm: beeswarmModule,
+    fan: fanModule,
+    lifetime: lifetimeModule,
+  };
 
   function activatePanel(step) {
     document.querySelectorAll(".viz-panel").forEach((p) => {
@@ -3170,13 +3360,11 @@ function setupScrollama() {
     });
     scrollyState.activeStep = step;
 
-    // Trigger build on first show (for resize correctness)
-    if (step === "stripes") stripesModule.show();
-    else if (step === "map") scrollMapModule.show();
-    else if (step === "ridge") ridgeModule.show();
-    else if (step === "beeswarm") beeswarmModule.show();
-    else if (step === "fan") fanModule.show();
-    else if (step === "lifetime") lifetimeModule.show();
+    const module = actModules[step];
+    if (module) {
+      module.show();
+      module.reveal();
+    }
   }
 
   scroller
@@ -3230,6 +3418,47 @@ function markDataFailed() {
   document.documentElement.classList.remove("is-loading");
   document.body.classList.remove("scroll-locked");
   document.body.style.top = "";
+}
+
+function revealStripesOnFirstScroll() {
+  let armed = true;
+  let timer = null;
+  const reveal = () => {
+    if (!armed) return;
+    armed = false;
+    window.removeEventListener("scroll", reveal);
+    window.removeEventListener("wheel", reveal);
+    window.removeEventListener("touchstart", reveal);
+    window.removeEventListener("keydown", revealOnScrollKey);
+    timer = setTimeout(() => stripesModule.reveal(), 200);
+  };
+  const revealOnScrollKey = (event) => {
+    if (
+      [
+        "ArrowDown",
+        "ArrowUp",
+        "PageDown",
+        "PageUp",
+        "Home",
+        "End",
+        " ",
+      ].includes(event.key)
+    ) {
+      reveal();
+    }
+  };
+  window.addEventListener("scroll", reveal, { passive: true, once: true });
+  window.addEventListener("wheel", reveal, { passive: true, once: true });
+  window.addEventListener("touchstart", reveal, { passive: true, once: true });
+  window.addEventListener("keydown", revealOnScrollKey);
+  return () => {
+    armed = false;
+    clearTimeout(timer);
+    window.removeEventListener("scroll", reveal);
+    window.removeEventListener("wheel", reveal);
+    window.removeEventListener("touchstart", reveal);
+    window.removeEventListener("keydown", revealOnScrollKey);
+  };
 }
 
 // The interactive dashboard (heavy ~6,000-cell map + side charts).
@@ -3299,6 +3528,7 @@ async function main() {
     // Everything is rendered — unlock scrolling and flip the cue.
     clearTimeout(loadingNotice);
     markDataReady();
+    revealStripesOnFirstScroll();
   } catch (err) {
     console.error("Failed to start app", err);
     // Unlock scrolling so the page isn't stuck, and surface the error.
