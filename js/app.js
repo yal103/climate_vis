@@ -1300,6 +1300,7 @@ const scrollyState = {
   birthYear: 2000,
   lifetimeScenario: "ssp585",
   lifeScrubYear: null, // year the lifetime age-scrubber is parked on
+  lifeZoom: null, // [yearA, yearB] zoom window, or null for full view
 };
 
 // 7 latitude bands, ordered from south to north
@@ -1419,6 +1420,86 @@ function prefersReducedMotion() {
 }
 
 // =========================================================
+// SHARED ACT TOOLBAR
+// =========================================================
+const SCENARIO_OPTIONS = [
+  { value: "ssp126", label: "SSP1-2.6" },
+  { value: "ssp245", label: "SSP2-4.5" },
+  { value: "ssp585", label: "SSP5-8.5" },
+];
+const THRESHOLD_OPTIONS = [
+  { value: "1.5", label: "1.5°C" },
+  { value: "2.0", label: "2°C" },
+  { value: "3.0", label: "3°C" },
+  { value: "4.0", label: "4°C" },
+];
+
+// Build a compact control bar inside a scrolly panel, placed in normal flow
+// above the chart's <svg> so it reserves layout space (never overlaps the viz).
+// config: { groups: [{ name, label, options, value, onChange }], onReset, resetLabel }
+// Returns { setActive(groupName, value) } to sync buttons with external state.
+function createVizToolbar(panelId, config) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return null;
+  const bar = document.createElement("div");
+  bar.className = "viz-toolbar";
+
+  const apis = {};
+  (config.groups || []).forEach((group) => {
+    const wrap = document.createElement("div");
+    wrap.className = "vt-group";
+    if (group.label) {
+      const lab = document.createElement("span");
+      lab.className = "vt-label";
+      lab.textContent = group.label;
+      wrap.appendChild(lab);
+    }
+    const seg = document.createElement("div");
+    seg.className = "vt-seg";
+    const btns = {};
+    group.options.forEach((opt) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "seg-btn-mini";
+      b.textContent = opt.label;
+      b.dataset.value = opt.value;
+      if (opt.value === group.value) b.classList.add("active");
+      b.addEventListener("click", () => {
+        if (b.classList.contains("active")) return;
+        Object.values(btns).forEach((x) => x.classList.remove("active"));
+        b.classList.add("active");
+        group.onChange(opt.value);
+      });
+      btns[opt.value] = b;
+      seg.appendChild(b);
+    });
+    wrap.appendChild(seg);
+    bar.appendChild(wrap);
+    apis[group.name] = (v) =>
+      Object.entries(btns).forEach(([val, el]) =>
+        el.classList.toggle("active", val === v)
+      );
+  });
+
+  if (config.onReset) {
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "vt-reset";
+    reset.textContent = config.resetLabel || "Reset view";
+    reset.addEventListener("click", config.onReset);
+    bar.appendChild(reset);
+  }
+
+  // Insert before the panel's <svg> so it sits at the top of the flex column.
+  const svgEl = panel.querySelector("svg");
+  panel.insertBefore(bar, svgEl);
+  return {
+    el: bar,
+    setActive: (name, v) => apis[name] && apis[name](v),
+  };
+}
+
+// =========================================================
 // ACT I — WARMING STRIPES
 // =========================================================
 const stripesModule = (() => {
@@ -1426,6 +1507,21 @@ const stripesModule = (() => {
   const SCENARIOS = ["ssp126", "ssp245", "ssp585"];
   let stripesBuilt = false;
   let stripesRevealed = false;
+  let toolbar = null;
+  const state = { highlight: "all" };
+
+  // Dim the scenarios the reader isn't focusing on.
+  function applyHighlight() {
+    SCENARIOS.forEach((sc) => {
+      const on = state.highlight === "all" || state.highlight === sc;
+      g.selectAll(".stripe-row-" + sc).style("opacity", on ? 1 : 0.16);
+    });
+  }
+  function reset() {
+    state.highlight = "all";
+    if (toolbar) toolbar.setActive("highlight", "all");
+    applyHighlight();
+  }
 
   function init() {
     svg = d3.select("#stripes-svg");
@@ -1436,6 +1532,27 @@ const stripesModule = (() => {
     ro.observe(svg.node());
     // First build is triggered explicitly via show() — stripes is the one act
     // visible at load.
+
+    toolbar = createVizToolbar("panel-stripes", {
+      groups: [
+        {
+          name: "highlight",
+          label: "Highlight",
+          options: [
+            { value: "all", label: "All" },
+            { value: "ssp126", label: "SSP1-2.6" },
+            { value: "ssp245", label: "SSP2-4.5" },
+            { value: "ssp585", label: "SSP5-8.5" },
+          ],
+          value: state.highlight,
+          onChange: (v) => {
+            state.highlight = v;
+            applyHighlight();
+          },
+        },
+      ],
+      onReset: reset,
+    });
   }
 
   function build() {
@@ -1608,6 +1725,7 @@ const stripesModule = (() => {
         scrollyTipHide();
       });
 
+    applyHighlight();
     stripesBuilt = true;
   }
 
@@ -1647,6 +1765,8 @@ const scrollMapModule = (() => {
   let svg, g, gZoom, dims, projection, path, zoom;
   let built = false;
   let revealed = false;
+  let toolbar = null;
+  const state = { scenario: "ssp585", threshold: "2.0" };
 
   const ANNOTATIONS = [
     {
@@ -1693,6 +1813,67 @@ const scrollMapModule = (() => {
     });
     ro.observe(svg.node());
     buildLegend(); // cheap; ready before the chart is built
+
+    toolbar = createVizToolbar("panel-map", {
+      groups: [
+        {
+          name: "scenario",
+          label: "Scenario",
+          options: SCENARIO_OPTIONS,
+          value: state.scenario,
+          onChange: (v) => {
+            state.scenario = v;
+            recolor();
+            updateLabel();
+          },
+        },
+        {
+          name: "threshold",
+          label: "Threshold",
+          options: THRESHOLD_OPTIONS,
+          value: state.threshold,
+          onChange: (v) => {
+            state.threshold = v;
+            recolor();
+            updateLabel();
+          },
+        },
+      ],
+      onReset: reset,
+    });
+  }
+
+  function updateLabel() {
+    const sEl = document.getElementById("scroll-map-scenario");
+    const tEl = document.getElementById("scroll-map-threshold");
+    if (sEl) sEl.textContent = SCENARIO_LABELS[state.scenario];
+    if (tEl) tEl.textContent = parseFloat(state.threshold);
+  }
+
+  // Recolor existing cells in place (cheap — no re-projection) when the
+  // scenario or threshold changes.
+  function recolor() {
+    if (!built) return;
+    const flat = data.crossings[state.scenario][state.threshold];
+    gZoom.selectAll(".scroll-map-cells .map-cell").each(function (d) {
+      const v = flat[d.idx];
+      d.crossing = v;
+      d3.select(this)
+        .attr("class", v === null ? "map-cell never" : "map-cell")
+        .attr("fill", v === null ? null : crossingScale(v));
+    });
+  }
+
+  function reset() {
+    state.scenario = "ssp585";
+    state.threshold = "2.0";
+    if (toolbar) {
+      toolbar.setActive("scenario", "ssp585");
+      toolbar.setActive("threshold", "2.0");
+    }
+    recolor();
+    updateLabel();
+    if (zoom) svg.transition().duration(450).call(zoom.transform, d3.zoomIdentity);
   }
 
   function onCoastlines() {
@@ -1779,7 +1960,7 @@ const scrollMapModule = (() => {
     const { lats, lons, n_lat, n_lon } = data.grid;
     const dLat = (lats[1] - lats[0]) / 2;
     const dLon = (lons[1] - lons[0]) / 2;
-    const flat = data.crossings["ssp585"]["2.0"];
+    const flat = data.crossings[state.scenario][state.threshold];
     const cellG = gZoom.append("g").attr("class", "scroll-map-cells");
 
     for (let i = 0; i < n_lat; i++) {
@@ -1808,7 +1989,8 @@ const scrollMapModule = (() => {
           .datum({ lat, lon, idx, crossing: v })
           .on("pointerenter", onCellEnter)
           .on("pointermove", onCellMove)
-          .on("pointerleave", onCellLeave);
+          .on("pointerleave", onCellLeave)
+          .on("click", onCellClick);
       }
     }
 
@@ -1911,7 +2093,7 @@ const scrollMapModule = (() => {
       .attr("y", height - 14)
       .attr("text-anchor", "end")
       .style("opacity", revealed ? null : 0)
-      .text("scroll to zoom · drag to pan · double-click to reset");
+      .text("click a region to zoom · drag to pan · double-click to reset");
 
     if (!revealed) annoG.style("opacity", 0);
 
@@ -1945,6 +2127,17 @@ const scrollMapModule = (() => {
   function onCellLeave() {
     d3.select(this).classed("cell-hover", false);
     scrollyTipHide();
+  }
+  // Click a region to zoom into it (then drag to pan, Reset to return).
+  function onCellClick(event, d) {
+    if (!zoom || !dims) return;
+    const [px, py] = projection([d.lon, d.lat]);
+    const k = 4;
+    const t = d3.zoomIdentity
+      .translate(dims.width / 2, dims.height / 2)
+      .scale(k)
+      .translate(-px, -py);
+    svg.transition().duration(650).call(zoom.transform, t);
   }
 
   function show() {
@@ -1992,9 +2185,29 @@ const scrollMapModule = (() => {
 // ACT III — RIDGE PLOT
 // =========================================================
 const ridgeModule = (() => {
-  let svg, g, dims;
+  let svg, g, gStatic, gRidges, gScrub, dims;
   let built = false;
   let revealed = false;
+  let toolbar = null;
+  const state = { scenario: "ssp585", threshold: "2.0" };
+
+  function updateLabel() {
+    const el = document.getElementById("ridge-scenario-label");
+    if (el)
+      el.textContent = `${SCENARIO_LABELS[state.scenario]} · +${parseFloat(
+        state.threshold
+      )}°C`;
+  }
+  function reset() {
+    state.scenario = "ssp585";
+    state.threshold = "2.0";
+    if (toolbar) {
+      toolbar.setActive("scenario", "ssp585");
+      toolbar.setActive("threshold", "2.0");
+    }
+    updateLabel();
+    build({ animate: true });
+  }
 
   // Kernel density estimator
   function kde(kernel, bandwidth, sampleX) {
@@ -2012,13 +2225,49 @@ const ridgeModule = (() => {
   function init() {
     svg = d3.select("#ridge-svg");
     g = svg.append("g").attr("class", "ridge-root");
+    // Persistent paint layers (bottom → top): static scaffolding, morphing
+    // ridges, then the scrub overlay. Keeping them around lets data-joins
+    // tween between scenarios instead of being wiped and redrawn.
+    gStatic = g.append("g").attr("class", "ridge-static");
+    gRidges = g.append("g").attr("class", "ridge-dyn");
+    gScrub = g.append("g").attr("class", "ridge-scrub-layer").style("opacity", 0);
     const ro = new ResizeObserver(() => {
-      if (built) build();
+      if (built) build({ animate: false });
     });
     ro.observe(svg.node());
+
+    toolbar = createVizToolbar("panel-ridge", {
+      groups: [
+        {
+          name: "scenario",
+          label: "Scenario",
+          options: SCENARIO_OPTIONS,
+          value: state.scenario,
+          onChange: (v) => {
+            state.scenario = v;
+            updateLabel();
+            build({ animate: true });
+          },
+        },
+        {
+          name: "threshold",
+          label: "Threshold",
+          options: THRESHOLD_OPTIONS,
+          value: state.threshold,
+          onChange: (v) => {
+            state.threshold = v;
+            updateLabel();
+            build({ animate: true });
+          },
+        },
+      ],
+      onReset: reset,
+    });
   }
 
-  function build() {
+  function build(opts = {}) {
+    const animate = !!opts.animate && revealed && !prefersReducedMotion();
+    const DUR = 720;
     const node = svg.node();
     const { width, height } = node.getBoundingClientRect();
     if (!width || !height) return;
@@ -2026,20 +2275,8 @@ const ridgeModule = (() => {
     const m = { top: 40, right: 90, bottom: 50, left: 150 };
     dims = { width, height, m };
 
-    g.selectAll("*").remove();
-
-    const cells = buildCellList("ssp585", "2.0");
-    // Top label
-    g.append("text")
-      .attr("class", "stripe-row-label dim")
-      .attr("x", m.left)
-      .attr("y", m.top - 18)
-      .style("font-size", "10px")
-      .style("letter-spacing", "0.16em")
-      .style("text-transform", "uppercase")
-      .text(
-        "Each ridge = a kernel density of crossing years inside one latitude band"
-      );
+    const cells = buildCellList(state.scenario, state.threshold);
+    const thLabel = `+${parseFloat(state.threshold)}°C`;
 
     const xMax = 2102;
     const xMin = 2018;
@@ -2050,8 +2287,83 @@ const ridgeModule = (() => {
 
     const bandHeight = (height - m.top - m.bottom) / LAT_BANDS.length;
 
-    // X axis
-    g.append("g")
+    // KDE setup
+    const sampleX = d3.range(xMin, xMax, 1);
+    const estimator = kde(gaussian, 2.5, sampleX);
+    const ridgeH = bandHeight * 1.4; // overlap rows
+
+    // North → south for natural reading (Arctic at top)
+    const orderedBands = LAT_BANDS.slice().reverse();
+
+    // ---- Compute everything up front, keyed by band ----
+    const bandData = orderedBands.map((band, rowIdx) => {
+      const rowY = m.top + rowIdx * bandHeight;
+      const baseline = rowY + bandHeight - 4;
+      const bandCells = cells.filter((c) => c.band.id === band.id);
+      const crossed = bandCells
+        .filter((c) => c.crossing !== null)
+        .map((c) => c.crossing);
+      const total = bandCells.length;
+      const crossedPct = total ? Math.round((crossed.length / total) * 100) : 0;
+      const hasRidge = crossed.length >= 2;
+
+      let pathD,
+        median = null;
+      if (hasRidge) {
+        const density = estimator(crossed);
+        const yMax = d3.max(density, (d) => d[1]) || 1;
+        const yScale = d3
+          .scaleLinear()
+          .domain([0, yMax])
+          .range([baseline, rowY + bandHeight - ridgeH]);
+        const area = d3
+          .area()
+          .curve(d3.curveBasis)
+          .x((d) => x(d[0]))
+          .y0(baseline)
+          .y1((d) => yScale(d[1]));
+        pathD = area(density);
+        median = d3.quantile(crossed.slice().sort(d3.ascending), 0.5);
+      } else {
+        // Collapsed area pinned to the baseline so it can morph in/out
+        // smoothly from a real ridge (same point count → tweenable "d").
+        const area = d3
+          .area()
+          .curve(d3.curveBasis)
+          .x((d) => x(d[0]))
+          .y0(baseline)
+          .y1(baseline);
+        pathD = area(sampleX.map((xv) => [xv, 0]));
+      }
+      return {
+        band,
+        rowY,
+        baseline,
+        crossed,
+        total,
+        crossedPct,
+        hasRidge,
+        pathD,
+        median,
+      };
+    });
+
+    // ---- Static scaffolding (instant; doesn't need to tween) ----
+    gStatic.selectAll("*").remove();
+    gStatic
+      .append("text")
+      .attr("class", "stripe-row-label dim")
+      .attr("x", m.left)
+      .attr("y", m.top - 18)
+      .style("font-size", "10px")
+      .style("letter-spacing", "0.16em")
+      .style("text-transform", "uppercase")
+      .text(
+        "Each ridge = a kernel density of crossing years inside one latitude band"
+      );
+
+    gStatic
+      .append("g")
       .attr("class", "ridge-axis")
       .attr("transform", `translate(0, ${height - m.bottom + 6})`)
       .call(
@@ -2060,133 +2372,159 @@ const ridgeModule = (() => {
           .tickValues([2020, 2040, 2060, 2080, 2100])
           .tickFormat(d3.format("d"))
       );
-    g.append("text")
+    gStatic
+      .append("text")
       .attr("class", "ridge-sublabel")
       .attr("x", (width - m.right + m.left) / 2)
       .attr("y", height - m.bottom + 36)
       .attr("text-anchor", "middle")
       .style("font-size", "10px")
-      .text("year when each grid cell first crosses +2°C");
+      .text(`year when each grid cell first crosses ${thLabel}`);
 
-    // KDE sample
-    const sampleX = d3.range(xMin, xMax, 1);
-    const estimator = kde(gaussian, 2.5, sampleX);
-
-    // From north to south for natural reading (Arctic at top)
-    const orderedBands = LAT_BANDS.slice().reverse();
-    const bandRows = []; // geometry + data for the scrub interaction
-
-    orderedBands.forEach((band, rowIdx) => {
-      const rowY = m.top + rowIdx * bandHeight;
-      const bandCells = cells.filter((c) => c.band.id === band.id);
-      const crossed = bandCells
-        .filter((c) => c.crossing !== null)
-        .map((c) => c.crossing);
-      const total = bandCells.length;
-      const crossedPct = total ? Math.round((crossed.length / total) * 100) : 0;
-      bandRows.push({ band, rowY, crossed, total });
-
-      // Row label
-      g.append("text")
+    bandData.forEach((r) => {
+      const labelY = r.rowY + bandHeight * 0.55;
+      gStatic
+        .append("text")
         .attr("class", "ridge-label")
         .attr("x", m.left - 14)
-        .attr("y", rowY + bandHeight * 0.55 - 4)
+        .attr("y", labelY - 4)
         .attr("text-anchor", "end")
-        .text(band.name);
-      g.append("text")
+        .text(r.band.name);
+      gStatic
+        .append("text")
         .attr("class", "ridge-sublabel")
         .attr("x", m.left - 14)
-        .attr("y", rowY + bandHeight * 0.55 + 10)
+        .attr("y", labelY + 10)
         .attr("text-anchor", "end")
-        .text(band.sub);
+        .text(r.band.sub);
 
-      // Right-side stat
-      g.append("text")
+      // Right-side % stat. Fade it when morphing so the number swap is gentle.
+      const pct = gStatic
+        .append("text")
         .attr("class", "ridge-label")
         .attr("x", width - m.right + 10)
-        .attr("y", rowY + bandHeight * 0.55 - 4)
-        .style("fill", band.color)
-        .text(`${crossedPct}%`);
-      g.append("text")
+        .attr("y", labelY - 4)
+        .style("fill", r.band.color)
+        .text(`${r.crossedPct}%`);
+      gStatic
+        .append("text")
         .attr("class", "ridge-sublabel")
         .attr("x", width - m.right + 10)
-        .attr("y", rowY + bandHeight * 0.55 + 10)
+        .attr("y", labelY + 10)
         .text("crossed");
-
-      if (crossed.length < 2) {
-        // Flat line if no data
-        g.append("line")
-          .attr("x1", m.left)
-          .attr("x2", width - m.right)
-          .attr("y1", rowY + bandHeight - 6)
-          .attr("y2", rowY + bandHeight - 6)
-          .attr("stroke", band.color)
-          .attr("stroke-width", 1.2)
-          .attr("opacity", 0.6);
-        return; // skip this band (inside forEach callback)
+      if (animate) {
+        pct.style("opacity", 0).transition().duration(DUR).style("opacity", 1);
       }
 
-      // KDE
-      const density = estimator(crossed);
-      const ridgeH = bandHeight * 1.4; // overlap rows
-      const yMax = d3.max(density, (d) => d[1]) || 1;
-      const yScale = d3
-        .scaleLinear()
-        .domain([0, yMax])
-        .range([rowY + bandHeight - 4, rowY + bandHeight - ridgeH]);
-
-      const area = d3
-        .area()
-        .curve(d3.curveBasis)
-        .x((d) => x(d[0]))
-        .y0(rowY + bandHeight - 4)
-        .y1((d) => yScale(d[1]));
-
-      g.append("path")
-        .attr("class", "ridge-path")
-        .attr("d", area(density))
-        .attr("fill", band.color)
-        .attr("stroke", band.color)
-        .attr("transform", revealed ? null : "translate(-14,0)")
-        .style("opacity", revealed ? 1 : 0);
-
-      // Median tick
-      const sorted = crossed.slice().sort(d3.ascending);
-      const median = d3.quantile(sorted, 0.5);
-      if (median != null) {
-        g.append("line")
-          .attr("x1", x(median))
-          .attr("x2", x(median))
-          .attr("y1", rowY + bandHeight - 4)
-          .attr("y2", rowY + bandHeight - 18)
-          .attr("stroke", "var(--ink)")
-          .attr("stroke-width", 1)
-          .attr("opacity", 0.55);
-        g.append("text")
-          .attr("class", "ridge-sublabel")
-          .attr("x", x(median))
-          .attr("y", rowY + bandHeight - 22)
-          .attr("text-anchor", "middle")
-          .style("fill", "var(--ink)")
-          .text(`${Math.round(median)}`);
+      // Flat reference line for bands that never cross.
+      if (!r.hasRidge) {
+        const fl = gStatic
+          .append("line")
+          .attr("x1", m.left)
+          .attr("x2", width - m.right)
+          .attr("y1", r.rowY + bandHeight - 6)
+          .attr("y2", r.rowY + bandHeight - 6)
+          .attr("stroke", r.band.color)
+          .attr("stroke-width", 1.2)
+          .attr("opacity", animate ? 0 : 0.6);
+        if (animate) fl.transition().duration(DUR).attr("opacity", 0.6);
       }
     });
 
-    // ---- Scrub line: drag/hover across years to read cumulative % crossed ----
-    const scrubG = g.append("g").style("opacity", 0);
-    const scrubLine = scrubG
+    // ---- Morphing ridges (keyed by band id) ----
+    const key = (d) => d.band.id;
+
+    const paths = gRidges
+      .selectAll("path.ridge-path")
+      .data(bandData, key);
+    paths.exit().remove();
+    const pathsMerge = paths
+      .enter()
+      .append("path")
+      .attr("class", "ridge-path")
+      .attr("d", (d) => d.pathD)
+      .attr("fill", (d) => d.band.color)
+      .attr("stroke", (d) => d.band.color)
+      .attr("transform", revealed ? null : "translate(-14,0)")
+      .style("opacity", revealed ? 1 : 0)
+      .merge(paths);
+
+    if (animate) {
+      pathsMerge
+        .transition()
+        .duration(DUR)
+        .ease(d3.easeCubicInOut)
+        .attr("d", (d) => d.pathD)
+        .attr("fill", (d) => d.band.color)
+        .attr("stroke", (d) => d.band.color);
+    } else {
+      pathsMerge
+        .attr("d", (d) => d.pathD)
+        .attr("fill", (d) => d.band.color)
+        .attr("stroke", (d) => d.band.color);
+      if (revealed) pathsMerge.attr("transform", null).style("opacity", 1);
+    }
+
+    // ---- Median ticks + labels (only for bands with a ridge) ----
+    const medData = bandData.filter((d) => d.hasRidge && d.median != null);
+
+    const medLines = gRidges
+      .selectAll("line.ridge-median")
+      .data(medData, key);
+    medLines.exit().remove();
+    const medMerge = medLines
+      .enter()
+      .append("line")
+      .attr("class", "ridge-median")
+      .attr("stroke", "var(--ink)")
+      .attr("stroke-width", 1)
+      .attr("opacity", 0.55)
+      .attr("x1", (d) => x(d.median))
+      .attr("x2", (d) => x(d.median))
+      .merge(medLines)
+      .attr("y1", (d) => d.baseline)
+      .attr("y2", (d) => d.rowY + bandHeight - 18);
+    (animate
+      ? medMerge.transition().duration(DUR).ease(d3.easeCubicInOut)
+      : medMerge
+    )
+      .attr("x1", (d) => x(d.median))
+      .attr("x2", (d) => x(d.median));
+
+    const medText = gRidges
+      .selectAll("text.ridge-median-label")
+      .data(medData, key);
+    medText.exit().remove();
+    const medTextMerge = medText
+      .enter()
+      .append("text")
+      .attr("class", "ridge-median-label ridge-sublabel")
+      .attr("text-anchor", "middle")
+      .style("fill", "var(--ink)")
+      .attr("x", (d) => x(d.median))
+      .merge(medText)
+      .attr("y", (d) => d.rowY + bandHeight - 22)
+      .text((d) => `${Math.round(d.median)}`);
+    (animate
+      ? medTextMerge.transition().duration(DUR).ease(d3.easeCubicInOut)
+      : medTextMerge
+    ).attr("x", (d) => x(d.median));
+
+    // ---- Scrub overlay (rebuilt each time; cheap, captures fresh data) ----
+    gScrub.selectAll("*").remove();
+    gScrub.style("opacity", 0);
+    const scrubLine = gScrub
       .append("line")
       .attr("class", "ridge-scrub-line")
       .attr("y1", m.top - 6)
       .attr("y2", height - m.bottom);
-    const scrubYear = scrubG
+    const scrubYear = gScrub
       .append("text")
       .attr("class", "ridge-scrub-year")
       .attr("y", m.top - 10)
       .attr("text-anchor", "middle");
-    // Per-band running-% labels that ride along the scrub line
-    const scrubLabels = bandRows.map((r) =>
-      scrubG
+    const scrubLabels = bandData.map((r) =>
+      gScrub
         .append("text")
         .attr("class", "ridge-scrub-pct")
         .attr("y", r.rowY + bandHeight * 0.55 + 24)
@@ -2194,7 +2532,8 @@ const ridgeModule = (() => {
         .style("fill", r.band.color)
     );
 
-    g.append("rect")
+    gScrub
+      .append("rect")
       .attr("x", m.left)
       .attr("y", m.top - 6)
       .attr("width", width - m.left - m.right)
@@ -2205,16 +2544,16 @@ const ridgeModule = (() => {
         const [mx] = d3.pointer(event, g.node());
         const yr = Math.max(xMin, Math.min(xMax, Math.round(x.invert(mx))));
         const px = x(yr);
-        scrubG.style("opacity", 1);
+        gScrub.style("opacity", 1);
         scrubLine.attr("x1", px).attr("x2", px);
         scrubYear.attr("x", px).text(yr);
-        bandRows.forEach((r, i) => {
+        bandData.forEach((r, i) => {
           const n = r.crossed.filter((c) => c <= yr).length;
           const pct = r.total ? Math.round((n / r.total) * 100) : 0;
           scrubLabels[i].attr("x", px).text(`${pct}%`);
         });
       })
-      .on("pointerleave", () => scrubG.style("opacity", 0));
+      .on("pointerleave", () => gScrub.style("opacity", 0));
 
     built = true;
   }
@@ -2226,10 +2565,11 @@ const ridgeModule = (() => {
     if (revealed) return;
     revealed = true;
     if (prefersReducedMotion()) {
-      g.selectAll(".ridge-path").attr("transform", null).style("opacity", 1);
+      gRidges.selectAll(".ridge-path").attr("transform", null).style("opacity", 1);
       return;
     }
-    g.selectAll(".ridge-path")
+    gRidges
+      .selectAll(".ridge-path")
       .transition()
       .delay((d, i) => i * 120)
       .duration(700)
@@ -2248,6 +2588,28 @@ const beeswarmModule = (() => {
   let built = false;
   let revealed = false;
   let nodes = null;
+  let toolbar = null;
+  const state = { scenario: "ssp585", threshold: "2.0" };
+
+  function thLabel() {
+    return `+${parseFloat(state.threshold)}°C`;
+  }
+
+  // Scenario/threshold change → recompute the layout and redraw.
+  function rebuild() {
+    nodes = null;
+    revealed = true; // keep dots visible (no re-entrance animation on a swap)
+    build();
+  }
+  function reset() {
+    state.scenario = "ssp585";
+    state.threshold = "2.0";
+    if (toolbar) {
+      toolbar.setActive("scenario", "ssp585");
+      toolbar.setActive("threshold", "2.0");
+    }
+    rebuild();
+  }
 
   function init() {
     svg = d3.select("#beeswarm-svg");
@@ -2259,6 +2621,32 @@ const beeswarmModule = (() => {
     });
     ro.observe(svg.node());
     buildLegend(); // cheap; ready before the chart is built
+
+    toolbar = createVizToolbar("panel-beeswarm", {
+      groups: [
+        {
+          name: "scenario",
+          label: "Scenario",
+          options: SCENARIO_OPTIONS,
+          value: state.scenario,
+          onChange: (v) => {
+            state.scenario = v;
+            rebuild();
+          },
+        },
+        {
+          name: "threshold",
+          label: "Threshold",
+          options: THRESHOLD_OPTIONS,
+          value: state.threshold,
+          onChange: (v) => {
+            state.threshold = v;
+            rebuild();
+          },
+        },
+      ],
+      onReset: reset,
+    });
   }
 
   function buildLegend() {
@@ -2279,7 +2667,7 @@ const beeswarmModule = (() => {
   }
 
   function computeNodes() {
-    const cells = buildCellList("ssp585", "2.0");
+    const cells = buildCellList(state.scenario, state.threshold);
     const sample = cells; // use them all
     const NEVER_X = 2105;
     const yearJitter = () => (Math.random() - 0.5) * 0.6;
@@ -2301,8 +2689,8 @@ const beeswarmModule = (() => {
     }`;
     const headline =
       d.crossing == null
-        ? "never crosses +2°C by 2100"
-        : `crosses +2°C in ${d.crossing}`;
+        ? `never crosses ${thLabel()} by 2100`
+        : `crosses ${thLabel()} in ${d.crossing}`;
     tip.innerHTML = `
       <div class="tip-row"><span class="tip-key">Location</span><span class="tip-val">${latStr}, ${lonStr}</span></div>
       <div class="tip-row"><span class="tip-key">Band</span><span class="tip-val">${d.band.name}</span></div>
@@ -2364,7 +2752,7 @@ const beeswarmModule = (() => {
       .attr("text-anchor", "middle")
       .style("font-size", "10px")
       .text(
-        "year each grid cell first crosses +2°C  (right of dashed line: never crosses by 2100)"
+        `year each grid cell first crosses ${thLabel()}  (right of dashed line: never crosses by 2100)`
       );
 
     // Latitude band Y centers (Arctic on top)
@@ -2526,7 +2914,7 @@ const beeswarmModule = (() => {
       scrubLabel.attr("x", px).text(yr).style("opacity", 1);
       readout
         .style("opacity", 1)
-        .text(`By ${yr}, ${pct}% of Earth has crossed +2°C`);
+        .text(`By ${yr}, ${pct}% of Earth has crossed ${thLabel()}`);
     }
     function clearScrub() {
       veil.style("opacity", 0);
@@ -2911,6 +3299,7 @@ const lifetimeModule = (() => {
   let svg, g, dims;
   let built = false;
   let revealed = false;
+  let started = false; // becomes true once the user submits a birth year
 
   // Compute first crossing of +2°C for various reference series
   function getMilestones(scenario) {
@@ -2949,6 +3338,50 @@ const lifetimeModule = (() => {
     return items;
   }
 
+  function readBirthInput() {
+    const input = document.getElementById("birth-year-input");
+    const v = Math.max(1930, Math.min(2025, +input.value || 2000));
+    input.value = v;
+    scrollyState.birthYear = v;
+    return v;
+  }
+
+  // User submitted a birth year: slide the popup up, reveal the graph.
+  function start() {
+    readBirthInput();
+    if (started) return;
+    started = true;
+    document.getElementById("panel-lifetime").classList.add("lifetime-started");
+    document.getElementById("lifetime-hint").textContent =
+      "Drag across the chart to zoom into any stretch of your life.";
+    build();
+    reveal();
+  }
+
+  // Reset the *view* only (keep the birth year): clear zoom + scrub, restore
+  // the default scenario.
+  function reset() {
+    scrollyState.lifeZoom = null;
+    scrollyState.lifeScrubYear = null;
+    scrollyState.lifetimeScenario = "ssp585";
+    document
+      .querySelectorAll("#lifetime-scenario-toggle .seg-btn-mini")
+      .forEach((b) => b.classList.toggle("active", b.dataset.value === "ssp585"));
+    rebuildAnimated();
+  }
+
+  // Rebuild the chart (e.g. swapping to a zoomed/reset view) with a quick
+  // fade-in. Build happens synchronously so the new view always renders even if
+  // the fade transition is interrupted.
+  function rebuildAnimated() {
+    build();
+    if (!started || prefersReducedMotion()) return;
+    g.interrupt().style("opacity", 0).transition().duration(260).style("opacity", 1);
+    // Safety net: guarantee the chart ends fully visible even if the fade
+    // transition is interrupted or its timer never advances.
+    setTimeout(() => g.style("opacity", 1), 320);
+  }
+
   function init() {
     svg = d3.select("#lifetime-svg");
     g = svg.append("g").attr("class", "lifetime-root");
@@ -2957,15 +3390,21 @@ const lifetimeModule = (() => {
     });
     ro.observe(svg.node());
 
-    // Wire up controls
+    // Submit birth year (button or Enter in the input)
+    document.getElementById("lifetime-go").addEventListener("click", start);
     const input = document.getElementById("birth-year-input");
-    input.addEventListener("input", () => {
-      const v = +input.value;
-      if (v >= 1930 && v <= 2025) {
-        scrollyState.birthYear = v;
-        build();
-      }
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") start();
     });
+    input.addEventListener("change", () => {
+      readBirthInput();
+      if (started) rebuildAnimated();
+    });
+
+    // Reset view
+    document.getElementById("lifetime-reset").addEventListener("click", reset);
+
+    // Scenario toggle (only redraws once the chart is live)
     document
       .querySelectorAll("#lifetime-scenario-toggle .seg-btn-mini")
       .forEach((btn) => {
@@ -2975,7 +3414,7 @@ const lifetimeModule = (() => {
             .forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
           scrollyState.lifetimeScenario = btn.dataset.value;
-          build();
+          if (started) rebuildAnimated();
         });
       });
   }
@@ -2992,7 +3431,10 @@ const lifetimeModule = (() => {
     const { width, height } = node.getBoundingClientRect();
     if (!width || !height) return;
     svg.attr("viewBox", `0 0 ${width} ${height}`);
-    const m = { top: 120, right: 96, bottom: 56, left: 64 };
+    // Once started, the floating control bar sits across the top of the panel,
+    // so drop the chart header + plot down to clear it.
+    const headerY = started ? 78 : 8;
+    const m = { top: started ? 168 : 120, right: 96, bottom: 56, left: 64 };
     dims = { width, height, m };
     g.selectAll("*").remove();
 
@@ -3003,9 +3445,13 @@ const lifetimeModule = (() => {
     const xMax = 2100;
     const xMin = Math.min(birth, dataStart);
     const curveStart = Math.max(birth, dataStart); // lived-warming begins here
+    // Visible window: full lifetime, or a zoomed-in range the user brushed.
+    const zoom = scrollyState.lifeZoom;
+    const domMin = zoom ? Math.max(xMin, zoom[0]) : xMin;
+    const domMax = zoom ? Math.min(xMax, zoom[1]) : xMax;
     const x = d3
       .scaleLinear()
-      .domain([xMin, xMax])
+      .domain([domMin, domMax])
       .range([m.left, width - m.right]);
 
     const plotTop = m.top,
@@ -3038,6 +3484,17 @@ const lifetimeModule = (() => {
     grad.append("stop").attr("offset", "40%").attr("stop-color", "#fde29c");
     grad.append("stop").attr("offset", "75%").attr("stop-color", "#ff5c2b");
     grad.append("stop").attr("offset", "100%").attr("stop-color", "#7a0a04");
+
+    // Clip the trajectory to the plot area so a zoomed view doesn't spill out.
+    defs.selectAll("#life-clip").remove();
+    defs
+      .append("clipPath")
+      .attr("id", "life-clip")
+      .append("rect")
+      .attr("x", m.left)
+      .attr("y", plotTop - 60)
+      .attr("width", width - m.left - m.right)
+      .attr("height", plotBottom - plotTop + 60);
 
     // ---- Axes ----
     g.append("g")
@@ -3094,10 +3551,12 @@ const lifetimeModule = (() => {
       .attr("class", "life-area")
       .attr("d", area(pts))
       .attr("fill", "url(#life-gradient)")
+      .attr("clip-path", "url(#life-clip)")
       .style("opacity", revealed ? null : 0);
     const lifeLinePath = g
       .append("path")
       .attr("class", "life-line")
+      .attr("clip-path", "url(#life-clip)")
       .attr("d", line(pts));
     const lifeLineLen = lifeLinePath.node().getTotalLength();
     lifeLinePath
@@ -3122,7 +3581,12 @@ const lifetimeModule = (() => {
 
     // ---- Milestone markers on the curve (packed labels along the top) ----
     const milestones = getMilestones(scen)
-      .filter((d) => d.year != null && d.year >= curveStart && d.year <= xMax)
+      .filter(
+        (d) =>
+          d.year != null &&
+          d.year >= Math.max(curveStart, domMin) &&
+          d.year <= domMax
+      )
       .sort((a, b) => a.year - b.year);
     // Two staggered rows so clustered late-century crossings don't overprint.
     const LABEL_GAP = 128;
@@ -3180,69 +3644,69 @@ const lifetimeModule = (() => {
         .text(mi.label.replace(" crosses +2°C", " +2°C"));
     });
 
-    // ---- Birth handle (draggable) ----
-    const birthHandle = g
-      .append("g")
-      .attr("class", "life-birth-handle")
-      .style("cursor", "ew-resize");
-    birthHandle
-      .append("line")
-      .attr("class", "life-birth-stem")
-      .attr("x1", 0)
-      .attr("x2", 0)
-      .attr("y1", y(baseAtBirth))
-      .attr("y2", plotBottom);
-    birthHandle
-      .append("circle")
-      .attr("cx", 0)
-      .attr("cy", y(baseAtBirth))
-      .attr("r", 7)
-      .attr("fill", "var(--ink)")
-      .attr("stroke", "var(--bg)")
-      .attr("stroke-width", 3);
-    birthHandle
-      .append("text")
-      .attr("class", "life-birth-label")
-      .attr("x", 0)
-      .attr("y", y(baseAtBirth) - 14)
-      .attr("text-anchor", "middle")
-      .text(`born ${birth}`);
-    birthHandle.attr("transform", `translate(${x(birth)},0)`);
-    birthHandle.call(
-      d3.drag().on("drag", (event) => {
-        const yr = Math.max(
-          1930,
-          Math.min(2025, Math.round(x.invert(event.x)))
-        );
-        if (yr !== scrollyState.birthYear) {
-          scrollyState.birthYear = yr;
-          document.getElementById("birth-year-input").value = yr;
-          build();
-        }
-      })
-    );
+    // ---- Birth handle (draggable) — only when the birth year is in view ----
+    if (birth >= domMin && birth <= domMax) {
+      const birthHandle = g
+        .append("g")
+        .attr("class", "life-birth-handle")
+        .style("cursor", "ew-resize");
+      birthHandle
+        .append("line")
+        .attr("class", "life-birth-stem")
+        .attr("x1", 0)
+        .attr("x2", 0)
+        .attr("y1", y(baseAtBirth))
+        .attr("y2", plotBottom);
+      birthHandle
+        .append("circle")
+        .attr("cx", 0)
+        .attr("cy", y(baseAtBirth))
+        .attr("r", 7)
+        .attr("fill", "var(--ink)")
+        .attr("stroke", "var(--bg)")
+        .attr("stroke-width", 3);
+      birthHandle
+        .append("text")
+        .attr("class", "life-birth-label")
+        .attr("x", 0)
+        .attr("y", y(baseAtBirth) - 14)
+        .attr("text-anchor", "middle")
+        .text(`born ${birth}`);
+      birthHandle.attr("transform", `translate(${x(birth)},0)`);
+      birthHandle.raise().call(
+        d3.drag().on("drag", (event) => {
+          const yr = Math.max(1930, Math.min(2025, Math.round(x.invert(event.x))));
+          if (yr !== scrollyState.birthYear) {
+            scrollyState.birthYear = yr;
+            document.getElementById("birth-year-input").value = yr;
+            build();
+          }
+        })
+      );
+    }
 
     // ---- Header / live readout ----
     g.append("text")
       .attr("class", "life-eyebrow")
       .attr("x", m.left)
-      .attr("y", 30)
+      .attr("y", headerY)
       .text(
-        "Your lifetime · " +
+        (zoom ? `Zoomed ${domMin}–${domMax}` : "Your lifetime") +
+          " · " +
           SCENARIO_LABELS[scen] +
-          " · hover or drag across the chart"
+          " · drag to zoom · hover to read"
       );
     const headline = g
       .append("text")
       .attr("class", "life-age-text")
       .attr("x", m.left)
-      .attr("y", 60)
+      .attr("y", headerY + 30)
       .style("font-size", "24px");
     const subline = g
       .append("text")
       .attr("class", "life-eyebrow")
       .attr("x", m.left)
-      .attr("y", 84)
+      .attr("y", headerY + 54)
       .style("font-size", "12px")
       .style("letter-spacing", "0.04em")
       .style("text-transform", "none")
@@ -3270,8 +3734,10 @@ const lifetimeModule = (() => {
       .attr("y", -14)
       .attr("text-anchor", "middle");
 
+    const scrubLo = Math.max(curveStart, domMin);
+    const scrubHi = Math.min(xMax, domMax);
     function setScrub(year) {
-      year = Math.max(curveStart, Math.min(xMax, Math.round(year)));
+      year = Math.max(scrubLo, Math.min(scrubHi, Math.round(year)));
       scrollyState.lifeScrubYear = year;
       const v = valueAt(scen, year);
       const px = x(year),
@@ -3294,25 +3760,49 @@ const lifetimeModule = (() => {
       );
     }
 
-    // Interaction surface
-    g.append("rect")
-      .attr("class", "life-scrub-surface")
-      .attr("x", m.left)
-      .attr("y", plotTop)
-      .attr("width", width - m.left - m.right)
-      .attr("height", plotBottom - plotTop)
-      .style("fill", "transparent")
-      .style("cursor", "ew-resize")
-      .call(d3.drag().on("start drag", (event) => setScrub(x.invert(event.x))))
-      .on("pointermove", function (event) {
+    // ---- Brush: drag across a stretch of time to zoom into it ----
+    const brush = d3
+      .brushX()
+      .extent([
+        [m.left, plotTop],
+        [width - m.right, plotBottom],
+      ])
+      .on("end", brushed);
+
+    function brushed({ selection, sourceEvent }) {
+      // Ignore programmatic clears (no sourceEvent) and empty selections.
+      if (!selection || !sourceEvent) return;
+      const [px0, px1] = selection;
+      const y0 = Math.round(x.invert(px0));
+      const y1 = Math.round(x.invert(px1));
+      brushGroup.call(brush.move, null); // drop the grey selection box
+      if (y1 - y0 < 3) return; // too small to be meaningful
+      scrollyState.lifeZoom = [y0, y1];
+      rebuildAnimated();
+    }
+
+    const brushGroup = g.append("g").attr("class", "life-brush").call(brush);
+
+    // Keep the hover readout working: the brush's overlay rect still receives
+    // pointermove when the user isn't actively dragging a selection.
+    brushGroup
+      .select(".overlay")
+      .style("cursor", "crosshair")
+      .on("pointermove.read", function (event) {
         setScrub(x.invert(d3.pointer(event, g.node())[0]));
       });
 
-    // Park the scrubber at its remembered year (or "today")
+    // Layering: the scrub indicator and the draggable birth handle must sit
+    // above the brush overlay. The area/line/milestones are non-interactive
+    // (see CSS) so the overlay still receives hover everywhere.
+    scrub.raise();
+    g.select(".life-birth-handle").raise();
+
+    // Park the scrubber at its remembered year (or the start of the view)
     const initYear =
       scrollyState.lifeScrubYear != null
-        ? Math.max(curveStart, Math.min(xMax, scrollyState.lifeScrubYear))
-        : Math.max(curveStart, Math.min(xMax, 2025));
+        ? Math.max(scrubLo, Math.min(scrubHi, scrollyState.lifeScrubYear))
+        : Math.max(scrubLo, Math.min(scrubHi, 2026));
     setScrub(initYear);
 
     g.selectAll(".life-milestone-mark").style("opacity", revealed ? 1 : 0);
@@ -3321,9 +3811,11 @@ const lifetimeModule = (() => {
   }
 
   function show() {
-    if (!built) build();
+    // Graph stays hidden behind the popup until the user submits a birth year.
+    if (started && !built) build();
   }
   function reveal() {
+    if (!started) return;
     if (revealed) return;
     revealed = true;
     if (prefersReducedMotion()) {
@@ -3403,7 +3895,9 @@ function setupStickyStepStage() {
       steps.find((step) => step.dataset.step === activeStep) || steps[0];
     const rect = current.getBoundingClientRect();
     const threshold = window.innerHeight * 0.55;
-    const value = rect.height ? clamp01((threshold - rect.top) / rect.height) : 0;
+    const value = rect.height
+      ? clamp01((threshold - rect.top) / rect.height)
+      : 0;
     stage.style.setProperty("--scrolly-progress", value.toFixed(3));
   }
 

@@ -65,13 +65,6 @@
         </div>
         <div class="hero-rule"></div>
 
-        <!-- Dateline -->
-        <p class="dateline">
-          <!-- <span>CMIP6 · CESM2 ensemble</span>
-          <span class="dateline-sep" aria-hidden="true">/</span>
-          <span>Scenario projections 2015–2100</span> -->
-        </p>
-
         <!-- Headline -->
         <h1 class="hero-title">
           <span class="title-line title-line-1">A&nbsp;world</span>
@@ -89,6 +82,10 @@
             cross dangerous thresholds decades apart. Scroll to see
             <em>when</em>, <em>where</em>, and <em>how&nbsp;much</em> — and what
             choices change it.
+          </p>
+          <p class="hero-lead hero-lead-note">
+            All temperatures are <em>warming anomalies</em> — degrees above the
+            2015–2034 average, not absolute temperature.
           </p>
           <aside class="hero-byline">
             <span class="byline-label">By</span>
@@ -141,8 +138,10 @@
         <div class="viz-panel" data-viz="map" id="panel-map">
           <div class="viz-meta">
             <span class="viz-label"
-              >Act II · When each region crosses +2°C ·
-              <span id="scroll-map-scenario">SSP5-8.5</span></span
+              >Act II · When each region crosses +<span
+                id="scroll-map-threshold"
+                >2</span
+              >°C · <span id="scroll-map-scenario">SSP5-8.5</span></span
             >
           </div>
           <svg id="scroll-map" class="full-svg"></svg>
@@ -191,23 +190,46 @@
           <div class="viz-meta">
             <span class="viz-label">Act V · A lifetime under warming</span>
           </div>
-          <div class="lifetime-controls">
-            <label for="birth-year-input">I was born in</label>
-            <input
-              type="number"
-              id="birth-year-input"
-              min="1930"
-              max="2025"
-              value="2000"
-            />
-            <div class="lifetime-scenario-toggle" id="lifetime-scenario-toggle">
-              <button class="seg-btn-mini" data-value="ssp126">SSP1-2.6</button>
-              <button class="seg-btn-mini" data-value="ssp245">SSP2-4.5</button>
-              <button class="seg-btn-mini active" data-value="ssp585">
-                SSP5-8.5
+
+          <!-- Morphing card: starts as a centered popup, then slides up to
+               become the control bar once the user submits a birth year. -->
+          <div class="lifetime-card" id="lifetime-card">
+            <p class="lc-question">What year were you born?</p>
+            <div class="lc-controls">
+              <label class="lc-label" for="birth-year-input">I was born in</label>
+              <input
+                type="number"
+                id="birth-year-input"
+                min="1930"
+                max="2025"
+                value="2000"
+              />
+              <button class="lc-go" id="lifetime-go" type="button">
+                See my lifetime →
+              </button>
+              <div
+                class="lifetime-scenario-toggle lc-scenarios"
+                id="lifetime-scenario-toggle"
+              >
+                <button class="seg-btn-mini" data-value="ssp126">
+                  SSP1-2.6
+                </button>
+                <button class="seg-btn-mini" data-value="ssp245">
+                  SSP2-4.5
+                </button>
+                <button class="seg-btn-mini active" data-value="ssp585">
+                  SSP5-8.5
+                </button>
+              </div>
+              <button class="lc-reset" id="lifetime-reset" type="button">
+                Reset view
               </button>
             </div>
+            <p class="lc-hint" id="lifetime-hint">
+              We'll trace the warming you'll live through.
+            </p>
           </div>
+
           <svg id="lifetime-svg" class="full-svg"></svg>
         </div>
 
@@ -221,11 +243,13 @@
           <p class="step-eyebrow">Act I — The acceleration</p>
           <h3>Every year, warmer than the last.</h3>
           <p>
-            Each stripe is a single year of projected global temperature. The
-            cooler blues are the recent past; the angry reds are the futures we
-            may inherit. From the top, the world's most ambitious mitigation
-            path. From the bottom, fossil-fueled business as usual. The stripes
-            don't lie — every scenario warms, the question is only how much.
+            Blue is the cooler past; red is the future. Every scenario warms —
+            the only question is how much.
+          </p>
+          <p class="step-howto">
+            <strong>How to read it</strong>
+            One column = one year (2015→2100), colored by temperature. Rows are
+            scenarios, lowest emissions on top.
           </p>
         </div>
 
@@ -233,11 +257,13 @@
           <p class="step-eyebrow">Act II — The geography</p>
           <h3>But warming isn't uniform.</h3>
           <p>
-            Some places will cross +2°C this decade. Others may not see it
-            before 2100. The Arctic is already running ahead — high-latitude
-            land warms two to four times the global average. Meanwhile vast
-            stretches of the Southern Ocean stay cool, buffered by deep waters
-            that absorb the heat we add.
+            The Arctic crosses +2°C this decade; the Southern Ocean may never.
+            A place "crosses" when it first sits 2°C above its own baseline.
+          </p>
+          <p class="step-howto">
+            <strong>How to read it</strong>
+            Color = the year it crosses +2°C: red early, blue late, grey never.
+            Hover for the exact year.
           </p>
         </div>
 
@@ -245,11 +271,13 @@
           <p class="step-eyebrow">Act III — The latitude divide</p>
           <h3>The Arctic races. The Southern Ocean stalls.</h3>
           <p>
-            Each ridge below shows the <em>distribution</em> of crossing years
-            for one latitude band. The Arctic peak crashes in early — most
-            Arctic cells cross +2°C in the 2030s. The tropics are a broader,
-            later wave. And the Southern Ocean barely rises off the floor: most
-            of its area never crosses within this century at all.
+            The Arctic peaks early — most of it crosses in the 2030s. The
+            tropics arrive later; the far south barely rises at all.
+          </p>
+          <p class="step-howto">
+            <strong>How to read it</strong>
+            Each curve is one latitude band. Taller at a given year = more of
+            that band crosses +2°C then.
           </p>
         </div>
 
@@ -257,12 +285,13 @@
           <p class="step-eyebrow">Act IV — A patch of Earth, a single dot</p>
           <h3>Six thousand pieces of the planet.</h3>
           <p>
-            Each dot is one grid cell — one patch of Earth's surface. Their
-            horizontal position is the year they first cross +2°C. The dense red
-            wall on the left is the Arctic. The blue cluster on the far right —
-            beyond the timeline — are the cells that may never see +2°C.
-            Together they tell the same story the map does, but stripped of
-            geography.
+            Each dot is one patch of Earth. The red wall on the left is the
+            Arctic; the blue cluster past the line may never cross +2°C.
+          </p>
+          <p class="step-howto">
+            <strong>How to read it</strong>
+            Left→right = crossing year. Drag to sweep a year and see the share of
+            Earth already past +2°C; hover a dot for its location.
           </p>
         </div>
 
@@ -270,11 +299,13 @@
           <p class="step-eyebrow">Act V — The choice ahead</p>
           <h3>Three futures, branching from now.</h3>
           <p>
-            Up to today, all three scenarios share the same line. After that,
-            they fan apart — and the gap at 2100 is the difference our choices
-            make. The shaded band between SSP1-2.6 and SSP5-8.5 is the
-            <em>possibility space</em>: nearly 3°C of warming hangs on what
-            humanity does this decade.
+            The lines share a past, then fan apart. Nearly 3°C separates rapid
+            decarbonization (SSP1-2.6) from heavy fossil use (SSP5-8.5).
+          </p>
+          <p class="step-howto">
+            <strong>How to read it</strong>
+            Each line is one emissions scenario. The wider the band, the more our
+            choices still matter that year.
           </p>
         </div>
 
@@ -282,11 +313,13 @@
           <p class="step-eyebrow">Act V — In a lifetime</p>
           <h3>What does this mean for you?</h3>
           <p>
-            Type your birth year above. The timeline charts your life against
-            the warming milestones that will mark it: when the Arctic crosses
-            +2°C, when the world-as-a-whole does, when Europe does. These aren't
-            abstractions — they're events your generation will live through. The
-            scenario you pick changes the timing by decades.
+            Type your birth year. These are the +2°C milestones your generation
+            will actually live through — and the scenario shifts them by decades.
+          </p>
+          <p class="step-howto">
+            <strong>How to read it</strong>
+            The line is warming over your lifetime; top dots mark when regions
+            cross +2°C. Drag or hover for the warming at any age.
           </p>
         </div>
 
@@ -294,10 +327,13 @@
           <p class="step-eyebrow">Now — Explore</p>
           <h3>The full picture, in your hands.</h3>
           <p>
-            Below is the full dataset, interactive. Pick a scenario, a
-            threshold, a place. Click anywhere on the map to see how warming
-            will unfold for that patch of Earth. Compare regions. Scrub through
-            the years. The data is the same — only the lens changes.
+            The whole dataset, interactive. Pick a scenario, a threshold, a
+            place — and explore.
+          </p>
+          <p class="step-howto">
+            <strong>How to use it</strong>
+            Set scenario and threshold up top; the map recolors. Switch to
+            Anomaly and scrub the year, or click any cell to chart it.
           </p>
         </div>
       </div>
@@ -463,7 +499,8 @@
             <div>
               <h3 class="card-title">Global temperature trajectory</h3>
               <p class="card-sub">
-                Area-weighted global-mean anomaly · all scenarios
+                Each line is a scenario; warming above the 2015–2034 baseline.
+                The wider they spread, the more our choices matter.
               </p>
             </div>
           </header>
@@ -494,7 +531,8 @@
             <div>
               <h3 class="card-title">Distribution of crossing years</h3>
               <p class="card-sub">
-                Across all grid cells · current scenario & threshold
+                How many patches of Earth cross the threshold in each period ·
+                current scenario &amp; threshold
               </p>
             </div>
           </header>

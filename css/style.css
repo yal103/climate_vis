@@ -85,11 +85,12 @@ button {
     #7a0a04 94% 100%
   );
   position: relative;
-  min-height: 100svh;
+  height: 100vh;
+  height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(28px, 5vh, 64px) clamp(20px, 5vw, 72px);
+  padding: clamp(14px, 2.4vh, 64px) clamp(20px, 5vw, 72px);
   border-bottom: 1px solid var(--line-strong);
   overflow: hidden;
   background: linear-gradient(180deg, #08080a 0%, var(--bg) 46%, #120d0a 100%);
@@ -158,6 +159,12 @@ button {
   width: 100%;
   max-width: 1320px;
   margin: 0 auto;
+  /* Fill the viewport-height hero so the scroll cue stays pinned at the bottom
+     and never drops below the fold as the lead text grows. */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 /* ---- Masthead ---- */
@@ -242,17 +249,24 @@ button {
   letter-spacing: 0.04em;
   color: var(--ink-faint);
 }
+/* Collapse the dateline when it has no content so it doesn't eat vertical space */
+.dateline:empty {
+  display: none;
+  margin: 0;
+}
 .dateline-sep {
   color: var(--accent);
 }
 
 /* ---- Headline ---- */
 .hero-title {
-  margin: 0;
+  margin: clamp(14px, 2.5vh, 36px) 0 0;
   font-family: var(--font-display);
   font-weight: 300;
   font-variation-settings: "opsz" 144;
-  font-size: clamp(64px, 13vw, 188px);
+  /* also cap by viewport height so the headline can't crowd out the scroll cue
+     on short screens */
+  font-size: clamp(56px, min(13vw, 18vh), 188px);
   line-height: 0.82;
   letter-spacing: -0.045em;
   color: var(--ink);
@@ -311,7 +325,7 @@ button {
   grid-template-columns: minmax(0, 640px) auto;
   align-items: start;
   gap: clamp(28px, 6vw, 88px);
-  margin: clamp(28px, 5vh, 52px) 0 0;
+  margin: clamp(16px, 3vh, 52px) 0 0;
 }
 .hero-lead {
   margin: 0;
@@ -323,6 +337,16 @@ button {
 .hero-lead em {
   color: var(--ink);
   font-style: italic;
+}
+.hero-lead-note {
+  margin-top: 16px;
+  font-size: clamp(14px, 1.1vw, 15px);
+  color: var(--ink-faint);
+}
+.hero-lead-note em {
+  font-style: normal;
+  color: var(--ink-soft);
+  font-weight: 500;
 }
 .dropcap {
   float: left;
@@ -358,7 +382,7 @@ button {
 
 /* ---- Temperature key (legend + divider) ---- */
 .hero-scale {
-  margin: clamp(34px, 6vh, 64px) 0 0;
+  margin: clamp(18px, 3.2vh, 64px) 0 0;
   max-width: 760px;
 }
 .scale-bar {
@@ -391,7 +415,9 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 14px;
-  margin-top: clamp(34px, 6vh, 60px);
+  /* push the cue to the bottom of the hero so it's always on-screen */
+  margin-top: auto;
+  padding-bottom: clamp(40px, 2.5vh, 48px);
 }
 .scroll-rule {
   width: 72px;
@@ -1366,6 +1392,41 @@ body.scroll-locked {
   color: var(--ink);
 }
 
+/* "How to read it" helper note under each step's narrative */
+.step .step-howto,
+.step-copy .step-howto {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-faint);
+  border-left: 2px solid var(--accent-2);
+  padding-left: 12px;
+  margin: 18px 0 0;
+  max-width: 38ch;
+}
+.step-howto strong {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  margin: 0 0 5px;
+}
+.step-howto em {
+  font-style: normal;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+/* Inline defined term: subtle dotted underline */
+.term {
+  border-bottom: 1px dotted var(--ink-faint);
+  color: var(--ink);
+  font-style: normal;
+  cursor: help;
+}
+
 .scrolly-progress {
   position: relative;
   width: min(100%, 34ch);
@@ -1675,24 +1736,222 @@ body.scroll-locked {
 }
 
 /* =========================================================
+   SHARED ACT TOOLBAR
+   ========================================================= */
+/* In-flow control bar inserted above an act's chart, so it reserves layout
+   space and never overlaps the visualization. */
+.viz-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 18px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 8px;
+  padding: 8px 14px;
+  background: rgba(28, 26, 22, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  position: relative;
+  z-index: 3;
+}
+.vt-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.vt-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.vt-seg {
+  display: inline-flex;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px;
+  gap: 2px;
+}
+.vt-reset {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.vt-reset:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+/* Map: cells become clickable for click-to-zoom */
+.scroll-map-cells .map-cell {
+  cursor: zoom-in;
+}
+
+/* =========================================================
    LIFETIME TIMELINE
    ========================================================= */
-.lifetime-controls {
+/* ---- Act V: morphing popup → top control bar ---- */
+.lifetime-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: min(460px, 88%);
+  padding: 32px 32px 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1), 0 24px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  transition: top 0.7s cubic-bezier(0.66, 0, 0.2, 1),
+    left 0.7s cubic-bezier(0.66, 0, 0.2, 1),
+    right 0.7s cubic-bezier(0.66, 0, 0.2, 1),
+    transform 0.7s cubic-bezier(0.66, 0, 0.2, 1),
+    width 0.7s cubic-bezier(0.66, 0, 0.2, 1),
+    padding 0.7s cubic-bezier(0.66, 0, 0.2, 1),
+    border-radius 0.7s ease, box-shadow 0.7s ease, background 0.7s ease;
+}
+.lc-question {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.15;
+  color: var(--ink);
+}
+.lc-controls {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 0 8px 6px;
-  font-family: var(--font-body);
-  font-size: 15px;
-  color: var(--ink-soft);
+  justify-content: center;
+  gap: 12px;
 }
-.lifetime-controls label {
+.lc-label {
   font-family: var(--font-display);
   font-style: italic;
   font-size: 18px;
   color: var(--ink);
 }
+.lc-go {
+  background: var(--accent);
+  color: #1a0d07;
+  border: 0;
+  border-radius: 7px;
+  padding: 9px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.lc-go:hover {
+  background: var(--accent-2);
+  transform: translateY(-1px);
+}
+.lc-hint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+#panel-lifetime:not(.lifetime-started) .lc-scenarios,
+#panel-lifetime:not(.lifetime-started) .lc-reset {
+  display: none;
+}
+.lc-reset {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.lc-reset:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Started: card becomes a slim top bar, graph fades in */
+#panel-lifetime #lifetime-svg {
+  opacity: 0;
+  transition: opacity 0.6s ease 0.25s;
+  pointer-events: none;
+}
+#panel-lifetime.lifetime-started #lifetime-svg {
+  opacity: 1;
+  pointer-events: auto;
+}
+#panel-lifetime.lifetime-started .lifetime-card {
+  top: 44px;
+  left: 3%;
+  right: 3%;
+  transform: none;
+  width: auto;
+  max-width: none;
+  padding: 9px 14px;
+  border-radius: 10px;
+  flex-direction: row;
+  gap: 12px;
+  box-shadow: var(--shadow-1);
+  background: rgba(28, 26, 22, 0.82);
+  backdrop-filter: blur(6px);
+}
+.lifetime-started .lc-question,
+.lifetime-started .lc-hint,
+.lifetime-started .lc-go {
+  display: none;
+}
+.lifetime-started .lc-controls {
+  flex: 1;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 12px;
+}
+.lifetime-started .lc-scenarios {
+  display: inline-flex;
+}
+.lifetime-started .lc-reset {
+  display: inline-flex;
+  padding: 6px 10px;
+}
+.lifetime-started .lc-label {
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.lifetime-started #birth-year-input {
+  width: 74px;
+  font-size: 15px;
+  padding: 6px 8px;
+}
+.lifetime-started .seg-btn-mini {
+  padding: 5px 8px;
+}
+
 #birth-year-input {
   width: 92px;
   background: var(--bg-card);
@@ -1970,12 +2229,34 @@ body.scroll-locked {
 /* Act V — lifetime trajectory */
 .life-area {
   opacity: 0.5;
+  pointer-events: none;
 }
 .life-line {
   fill: none;
   stroke: var(--ink);
   stroke-width: 2;
   opacity: 0.85;
+  pointer-events: none;
+}
+/* Decorative layers must not steal pointer events from the zoom/hover brush */
+.life-threshold-line,
+.life-milestone-mark,
+.life-milestone-line,
+.life-milestone-dot,
+.life-milestone-text,
+.life-predata {
+  pointer-events: none;
+}
+/* Brush: hide the default handles/selection chrome, keep a subtle wash */
+.life-brush .selection {
+  fill: rgba(255, 181, 71, 0.14);
+  stroke: var(--accent-2);
+  stroke-opacity: 0.5;
+  shape-rendering: crispEdges;
+}
+.life-brush .handle {
+  fill: var(--accent-2);
+  fill-opacity: 0.4;
 }
 .life-axis-y text {
   font-family: var(--font-mono);
