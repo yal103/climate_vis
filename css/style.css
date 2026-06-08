@@ -1527,11 +1527,12 @@ body.scroll-locked {
     top: 56svh;
     height: 44vh;
     height: 44svh;
-    padding: 28px 6px;
+    padding: 28px clamp(14px, 4vw, 42px);
     background: var(--bg);
     border-top: 1px solid var(--line);
   }
   .step-stage-inner {
+    max-width: min(100%, 760px);
     min-height: 36vh;
     min-height: 36svh;
   }
@@ -1542,11 +1543,34 @@ body.scroll-locked {
     min-height: 46svh;
   }
   .step-copy h3 {
+    grid-column: 1;
     font-size: clamp(24px, 8vw, 34px);
   }
   .step-copy p:not(.step-eyebrow) {
     font-size: 14px;
     line-height: 1.48;
+  }
+  .step-copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1.18fr) minmax(150px, 0.82fr);
+    column-gap: clamp(20px, 6vw, 56px);
+    align-items: start;
+  }
+  .step-copy .step-eyebrow {
+    grid-column: 1 / -1;
+  }
+  .step-copy p:not(.step-eyebrow):not(.step-howto) {
+    grid-column: 1;
+    max-width: none;
+  }
+  .step-copy .step-howto {
+    grid-column: 2;
+    grid-row: 3 / span 2;
+    max-width: none;
+    margin: 4px 0 0;
+  }
+  .step-copy .scrolly-progress {
+    grid-column: 1 / -1;
   }
   .viz-panel {
     padding: 12px 12px 12px;
