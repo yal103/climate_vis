@@ -42,6 +42,26 @@ const SCENARIO_DESC = {
   ssp245: "middle of the road — current policy trajectory",
   ssp585: "fossil-fueled — high emissions",
 };
+const SCENARIO_HELP = [
+  {
+    key: "ssp126",
+    label: "SSP1-2.6",
+    short: "rapid cuts",
+    text: "Countries move quickly away from fossil fuels; warming slows late century.",
+  },
+  {
+    key: "ssp245",
+    label: "SSP2-4.5",
+    short: "middle path",
+    text: "Some climate policy works, but emissions fall gradually rather than fast.",
+  },
+  {
+    key: "ssp585",
+    label: "SSP5-8.5",
+    short: "high emissions",
+    text: "Fossil fuel use stays high; warming keeps rising through 2100.",
+  },
+];
 
 // =========================================================
 // DATA LOADING
@@ -463,7 +483,9 @@ const mapModule = (() => {
     showTooltip(event, d);
   }
   function onCellLeave() {
-    document.getElementById("tooltip").classList.remove("visible");
+    document
+      .getElementById("tooltip")
+      .classList.remove("visible", "scenario-tooltip");
   }
   function onCellClick(event, d) {
     state.selectedCell = {
@@ -509,6 +531,7 @@ function getRegionForCell(lat, lon) {
 
 function showTooltip(event, d) {
   const tip = document.getElementById("tooltip");
+  tip.classList.remove("scenario-tooltip");
   const { scenario, threshold, mode, year } = state;
   const crossing = data.crossings[scenario][threshold][d.idx];
   const anom = getCellAnomaly(scenario, year, d.latIdx, d.lonIdx);
@@ -578,6 +601,7 @@ function scrollyTip(hostId, event, html) {
   const host = document.getElementById(hostId);
   if (!host) return;
   if (tip.parentElement !== host) host.appendChild(tip);
+  tip.classList.remove("scenario-tooltip");
   tip.innerHTML = html;
   const hostRect = host.getBoundingClientRect();
   const tipRect = tip.getBoundingClientRect();
@@ -592,7 +616,71 @@ function scrollyTip(hostId, event, html) {
   tip.classList.add("visible");
 }
 function scrollyTipHide() {
-  document.getElementById("tooltip").classList.remove("visible");
+  document
+    .getElementById("tooltip")
+    .classList.remove("visible", "scenario-tooltip");
+}
+
+function scenarioHelpHTML() {
+  const rows = SCENARIO_HELP.map(
+    (s) => `
+      <div class="scenario-tip-row">
+        <span class="scenario-tip-label">${s.label}</span>
+        <span class="scenario-tip-short">${s.short}</span>
+        <span class="scenario-tip-text">${s.text}</span>
+      </div>`
+  ).join("");
+  return `
+    <div class="tip-key">Emissions scenarios</div>
+    <div class="tip-headline">Three possible futures</div>
+    <div class="scenario-tip-note">Lower numbers mean stronger climate action.</div>
+    <div class="scenario-tip-list">${rows}</div>`;
+}
+
+function showScenarioHelp(anchor) {
+  const tip = document.getElementById("tooltip");
+  if (!tip || !anchor) return;
+  document.body.appendChild(tip);
+  tip.innerHTML = scenarioHelpHTML();
+  tip.classList.add("scenario-tooltip", "visible");
+
+  const rect = anchor.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  let left = rect.left + window.scrollX;
+  let top = rect.bottom + window.scrollY + 10;
+  const maxLeft = window.scrollX + window.innerWidth - tipRect.width - 12;
+  left = Math.max(window.scrollX + 12, Math.min(left, maxLeft));
+  if (top + tipRect.height > window.scrollY + window.innerHeight - 12) {
+    top = rect.top + window.scrollY - tipRect.height - 10;
+  }
+  tip.style.left = `${left}px`;
+  tip.style.top = `${Math.max(window.scrollY + 12, top)}px`;
+}
+
+function hideScenarioHelp() {
+  const tip = document.getElementById("tooltip");
+  if (!tip) return;
+  tip.classList.remove("visible", "scenario-tooltip");
+}
+
+function attachScenarioHelp(button) {
+  if (!button || button.dataset.scenarioHelpReady) return;
+  button.dataset.scenarioHelpReady = "true";
+  button.addEventListener("mouseenter", () => showScenarioHelp(button));
+  button.addEventListener("mousemove", () => showScenarioHelp(button));
+  button.addEventListener("mouseleave", hideScenarioHelp);
+  button.addEventListener("focus", () => showScenarioHelp(button));
+  button.addEventListener("blur", hideScenarioHelp);
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    showScenarioHelp(button);
+  });
+  button.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      hideScenarioHelp();
+      button.blur();
+    }
+  });
 }
 
 // =========================================================
@@ -1226,6 +1314,10 @@ function updateStats() {
 // CONTROLS / EVENT WIRING
 // =========================================================
 function wireControls() {
+  document
+    .querySelectorAll("[data-scenario-help]")
+    .forEach((btn) => attachScenarioHelp(btn));
+
   // Scenario tabs
   document.querySelectorAll("#scenario-control .seg-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1368,6 +1460,10 @@ function latBandFor(lat) {
   return LAT_BANDS[LAT_BANDS.length - 1]; // catch 90°
 }
 
+function latitudeAreaWeight(lat) {
+  return Math.max(0, Math.cos((lat * Math.PI) / 180));
+}
+
 // Stripe palette — diverging blue→yellow→red over [-1, 6]°C
 function stripeColor(anom) {
   const scale = d3
@@ -1390,7 +1486,7 @@ function stripeColor(anom) {
   return scale(anom);
 }
 
-// Build a list of {cellIdx, lat, lon, band, crossing} for current scenario+threshold
+// Build a list of {cellIdx, lat, lon, band, crossing, weight} for current scenario+threshold
 function buildCellList(scenario, threshold) {
   const { lats, lons, n_lat, n_lon } = data.grid;
   const flat = data.crossings[scenario][threshold];
@@ -1406,6 +1502,7 @@ function buildCellList(scenario, threshold) {
         lon: lons[j],
         band: latBandFor(lats[i]),
         crossing: flat[idx], // year or null
+        weight: latitudeAreaWeight(lats[i]),
       });
     }
   }
@@ -1453,6 +1550,16 @@ function createVizToolbar(panelId, config) {
       lab.className = "vt-label";
       lab.textContent = group.label;
       wrap.appendChild(lab);
+      if (group.name === "scenario") {
+        const help = document.createElement("button");
+        help.type = "button";
+        help.className = "scenario-help-btn";
+        help.dataset.scenarioHelp = "";
+        help.setAttribute("aria-label", "Explain emissions scenarios");
+        help.textContent = "?";
+        wrap.appendChild(help);
+        attachScenarioHelp(help);
+      }
     }
     const seg = document.createElement("div");
     seg.className = "vt-seg";
@@ -2209,14 +2316,31 @@ const ridgeModule = (() => {
     build({ animate: true });
   }
 
-  // Kernel density estimator
-  function kde(kernel, bandwidth, sampleX) {
+  function weightedKde(kernel, bandwidth, sampleX) {
     return function (values) {
+      const totalWeight = d3.sum(values, (v) => v.weight) || 1;
       return sampleX.map((x) => [
         x,
-        d3.mean(values, (v) => kernel((x - v) / bandwidth)) || 0,
+        d3.sum(
+          values,
+          (v) => v.weight * kernel((x - v.crossing) / bandwidth)
+        ) / totalWeight,
       ]);
     };
+  }
+  function weightedQuantile(values, q, valueAccessor, weightAccessor) {
+    const sorted = values
+      .slice()
+      .sort((a, b) => valueAccessor(a) - valueAccessor(b));
+    const totalWeight = d3.sum(sorted, weightAccessor);
+    if (!sorted.length || !totalWeight) return null;
+    const target = totalWeight * q;
+    let acc = 0;
+    for (const item of sorted) {
+      acc += weightAccessor(item);
+      if (acc >= target) return valueAccessor(item);
+    }
+    return valueAccessor(sorted[sorted.length - 1]);
   }
   function gaussian(u) {
     return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
@@ -2289,7 +2413,7 @@ const ridgeModule = (() => {
 
     // KDE setup
     const sampleX = d3.range(xMin, xMax, 1);
-    const estimator = kde(gaussian, 2.5, sampleX);
+    const estimator = weightedKde(gaussian, 2.5, sampleX);
     const ridgeH = bandHeight * 1.4; // overlap rows
 
     // North → south for natural reading (Arctic at top)
@@ -2302,9 +2426,12 @@ const ridgeModule = (() => {
       const bandCells = cells.filter((c) => c.band.id === band.id);
       const crossed = bandCells
         .filter((c) => c.crossing !== null)
-        .map((c) => c.crossing);
-      const total = bandCells.length;
-      const crossedPct = total ? Math.round((crossed.length / total) * 100) : 0;
+        .map((c) => ({ crossing: c.crossing, weight: c.weight }));
+      const totalWeight = d3.sum(bandCells, (c) => c.weight);
+      const crossedWeight = d3.sum(crossed, (c) => c.weight);
+      const crossedPct = totalWeight
+        ? Math.round((crossedWeight / totalWeight) * 100)
+        : 0;
       const hasRidge = crossed.length >= 2;
 
       let pathD,
@@ -2323,7 +2450,12 @@ const ridgeModule = (() => {
           .y0(baseline)
           .y1((d) => yScale(d[1]));
         pathD = area(density);
-        median = d3.quantile(crossed.slice().sort(d3.ascending), 0.5);
+        median = weightedQuantile(
+          crossed,
+          0.5,
+          (d) => d.crossing,
+          (d) => d.weight
+        );
       } else {
         // Collapsed area pinned to the baseline so it can morph in/out
         // smoothly from a real ridge (same point count → tweenable "d").
@@ -2340,7 +2472,7 @@ const ridgeModule = (() => {
         rowY,
         baseline,
         crossed,
-        total,
+        totalWeight,
         crossedPct,
         hasRidge,
         pathD,
@@ -2359,7 +2491,7 @@ const ridgeModule = (() => {
       .style("letter-spacing", "0.16em")
       .style("text-transform", "uppercase")
       .text(
-        "Each ridge = a kernel density of crossing years inside one latitude band"
+        "Each ridge = an area-weighted density of crossing years inside one latitude band"
       );
 
     gStatic
@@ -2548,8 +2680,13 @@ const ridgeModule = (() => {
         scrubLine.attr("x1", px).attr("x2", px);
         scrubYear.attr("x", px).text(yr);
         bandData.forEach((r, i) => {
-          const n = r.crossed.filter((c) => c <= yr).length;
-          const pct = r.total ? Math.round((n / r.total) * 100) : 0;
+          const crossedWeight = d3.sum(
+            r.crossed.filter((c) => c.crossing <= yr),
+            (c) => c.weight
+          );
+          const pct = r.totalWeight
+            ? Math.round((crossedWeight / r.totalWeight) * 100)
+            : 0;
           scrubLabels[i].attr("x", px).text(`${pct}%`);
         });
       })
@@ -2682,6 +2819,7 @@ const beeswarmModule = (() => {
 
   function tooltip(event, d) {
     const tip = document.getElementById("tooltip");
+    tip.classList.remove("scenario-tooltip");
     const latStr = `${Math.abs(d.lat).toFixed(1)}°${d.lat >= 0 ? "N" : "S"}`;
     const normLon = d.lon > 180 ? d.lon - 360 : d.lon;
     const lonStr = `${Math.abs(normLon).toFixed(1)}°${
@@ -2713,7 +2851,9 @@ const beeswarmModule = (() => {
     tip.classList.add("visible");
   }
   function tooltipHide() {
-    document.getElementById("tooltip").classList.remove("visible");
+    document
+      .getElementById("tooltip")
+      .classList.remove("visible", "scenario-tooltip");
   }
 
   function build() {

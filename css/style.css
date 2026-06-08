@@ -541,6 +541,11 @@ body.scroll-locked {
   color: var(--ink-faint);
   margin-bottom: 10px;
 }
+.control-label-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
 
 .seg-control {
   display: inline-flex;
@@ -935,6 +940,10 @@ body.scroll-locked {
 .tooltip.visible {
   opacity: 1;
 }
+.tooltip.scenario-tooltip {
+  width: min(330px, calc(100vw - 24px));
+  white-space: normal;
+}
 
 .tip-row {
   display: flex;
@@ -960,6 +969,37 @@ body.scroll-locked {
   font-size: 18px;
   color: var(--accent-2);
   margin: 4px 0;
+}
+.scenario-tip-note {
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+}
+.scenario-tip-list {
+  display: grid;
+  gap: 8px;
+}
+.scenario-tip-row {
+  display: grid;
+  grid-template-columns: 74px 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+.scenario-tip-label,
+.scenario-tip-short {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.scenario-tip-label {
+  color: var(--ink);
+  font-weight: 700;
+}
+.scenario-tip-short {
+  color: var(--accent-2);
+  text-transform: uppercase;
+}
+.scenario-tip-text {
+  color: var(--ink-soft);
 }
 
 /* =========================================================
@@ -1769,6 +1809,34 @@ body.scroll-locked {
   text-transform: uppercase;
   color: var(--ink-faint);
 }
+.scenario-help-btn {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-soft);
+  cursor: help;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 0;
+  text-transform: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.scenario-help-btn:hover,
+.scenario-help-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-2);
+  color: var(--ink);
+  outline: none;
+}
 .vt-seg {
   display: inline-flex;
   background: var(--bg-card);
@@ -2304,4 +2372,11 @@ body.scroll-locked {
   font-weight: 600;
   fill: var(--bg);
   pointer-events: none;
+}
+
+@media (max-width: 520px) {
+  .scenario-tip-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
 }

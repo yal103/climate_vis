@@ -196,7 +196,9 @@
           <div class="lifetime-card" id="lifetime-card">
             <p class="lc-question">What year were you born?</p>
             <div class="lc-controls">
-              <label class="lc-label" for="birth-year-input">I was born in</label>
+              <label class="lc-label" for="birth-year-input"
+                >I was born in</label
+              >
               <input
                 type="number"
                 id="birth-year-input"
@@ -206,6 +208,14 @@
               />
               <button class="lc-go" id="lifetime-go" type="button">
                 See my lifetime →
+              </button>
+              <button
+                class="scenario-help-btn lc-scenarios"
+                type="button"
+                data-scenario-help
+                aria-label="Explain emissions scenarios"
+              >
+                ?
               </button>
               <div
                 class="lifetime-scenario-toggle lc-scenarios"
@@ -257,8 +267,8 @@
           <p class="step-eyebrow">Act II — The geography</p>
           <h3>But warming isn't uniform.</h3>
           <p>
-            The Arctic crosses +2°C this decade; the Southern Ocean may never.
-            A place "crosses" when it first sits 2°C above its own baseline.
+            The Arctic crosses +2°C this decade; the Southern Ocean may never. A
+            place "crosses" when it first sits 2°C above its own baseline.
           </p>
           <p class="step-howto">
             <strong>How to read it</strong>
@@ -290,8 +300,8 @@
           </p>
           <p class="step-howto">
             <strong>How to read it</strong>
-            Left→right = crossing year. Drag to sweep a year and see the share of
-            Earth already past +2°C; hover a dot for its location.
+            Left→right = crossing year. Drag to sweep a year and see the share
+            of Earth already past +2°C; hover a dot for its location.
           </p>
         </div>
 
@@ -299,13 +309,13 @@
           <p class="step-eyebrow">Act V — The choice ahead</p>
           <h3>Three futures, branching from now.</h3>
           <p>
-            The lines share a past, then fan apart. Nearly 3°C separates rapid
+            The lines share a past, then fan apart. Nearly 4°C separates rapid
             decarbonization (SSP1-2.6) from heavy fossil use (SSP5-8.5).
           </p>
           <p class="step-howto">
             <strong>How to read it</strong>
-            Each line is one emissions scenario. The wider the band, the more our
-            choices still matter that year.
+            Each line is one emissions scenario. The wider the band, the more
+            our choices still matter that year.
           </p>
         </div>
 
@@ -314,7 +324,8 @@
           <h3>What does this mean for you?</h3>
           <p>
             Type your birth year. These are the +2°C milestones your generation
-            will actually live through — and the scenario shifts them by decades.
+            will actually live through — and the scenario shifts them by
+            decades.
           </p>
           <p class="step-howto">
             <strong>How to read it</strong>
@@ -351,7 +362,17 @@
       <div class="controls-row">
         <!-- Scenario tabs -->
         <div class="control-group">
-          <div class="control-label">Emissions scenario</div>
+          <div class="control-label control-label-help">
+            <span>Emissions scenario</span>
+            <button
+              class="scenario-help-btn"
+              type="button"
+              data-scenario-help
+              aria-label="Explain emissions scenarios"
+            >
+              ?
+            </button>
+          </div>
           <div
             class="seg-control"
             id="scenario-control"
