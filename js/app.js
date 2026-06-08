@@ -64,6 +64,148 @@ const SCENARIO_HELP = [
 ];
 
 // =========================================================
+// TEMPERATURE UNIT PREFERENCE
+// =========================================================
+// Every value in the dataset is a warming *anomaly* (degrees above the
+// 2015–2034 baseline), i.e. a temperature difference rather than an absolute
+// reading. Converting a difference from Celsius to Fahrenheit is a pure 9/5
+// scale with NO +32 offset — a +2°C change is a +3.6°F change.
+const prefs = {
+  unit:
+    (typeof localStorage !== "undefined" &&
+      localStorage.getItem("tempUnit") === "F")
+      ? "F"
+      : "C",
+};
+
+// Convert an anomaly in °C to the active unit.
+function toUnit(c) {
+  return prefs.unit === "F" ? (c * 9) / 5 : c;
+}
+// The active unit's symbol.
+function unitSym() {
+  return prefs.unit === "F" ? "°F" : "°C";
+}
+// Signed anomaly with unit, e.g. "+3.2°C" / "+5.8°F".
+function fmtAnom(c, digits = 1) {
+  const v = toUnit(c);
+  return `${v >= 0 ? "+" : ""}${v.toFixed(digits)}${unitSym()}`;
+}
+// Axis tick: anomaly in °C → bare number + degree sign in the active unit,
+// e.g. 2 → "2°" (C) / "3.6°" (F). The axis label/header carries C vs F.
+function unitTick(c) {
+  const v = toUnit(c);
+  return `${Number.isInteger(v) ? v : v.toFixed(1)}°`;
+}
+// Magnitude with unit, no forced sign, trailing zeros trimmed:
+// 2.0 → "2°C" / "3.6°F", 1.5 → "1.5°C" / "2.7°F".
+function fmtMag(c, digits = 1) {
+  const s = toUnit(c)
+    .toFixed(digits)
+    .replace(/\.?0+$/, "");
+  return `${s}${unitSym()}`;
+}
+
+// Re-label every static, markup-driven temperature element for the active unit:
+//   [data-temp]      — a value in °C, formatted per data-temp-fmt
+//                      ("mag" | "tick" | "stick" signed degree | "smag" signed)
+//   [data-unitsym]   — a bare unit symbol placeholder
+// plus the JS-generated scrolly toolbar threshold buttons and the toggle state.
+// Charts redraw themselves via the "unitchange" event; this handles the DOM.
+function refreshUnitLabels() {
+  const num = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
+  document.querySelectorAll("[data-temp]").forEach((el) => {
+    const c = parseFloat(el.dataset.temp);
+    if (!Number.isFinite(c)) return;
+    const v = toUnit(c);
+    switch (el.dataset.tempFmt) {
+      case "tick":
+        el.textContent = `${num(v)}°`;
+        break;
+      case "stick":
+        el.textContent = `${v > 0 ? "+" : v < 0 ? "−" : ""}${num(
+          Math.abs(v)
+        )}°`;
+        break;
+      case "smag":
+        el.textContent = `${v >= 0 ? "+" : ""}${fmtMag(c)}`;
+        break;
+      default:
+        el.textContent = fmtMag(c);
+    }
+  });
+  document
+    .querySelectorAll("[data-unitsym]")
+    .forEach((el) => (el.textContent = unitSym()));
+  // Scrolly toolbar threshold buttons are built in JS; relabel numeric ones.
+  document.querySelectorAll(".viz-toolbar .seg-btn-mini").forEach((b) => {
+    const v = b.dataset.value;
+    if (v && /^[0-9.]+$/.test(v)) b.textContent = fmtMag(parseFloat(v));
+  });
+  // Keep the toggle in sync with the active unit.
+  document.querySelectorAll("#unit-toggle .unit-btn").forEach((b) => {
+    const on = b.dataset.unit === prefs.unit;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+}
+
+// Show / hide a centered "computing…" overlay inside a viz panel. Created
+// lazily so panels that never recompute pay nothing.
+function showPanelLoading(panelId, text = "Computing…") {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  let el = panel.querySelector(".panel-loading");
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "panel-loading";
+    el.innerHTML = `<span class="spinner" aria-hidden="true"></span><span class="panel-loading-text"></span>`;
+    panel.appendChild(el);
+  }
+  el.querySelector(".panel-loading-text").textContent = text;
+  el.classList.add("visible");
+}
+function hidePanelLoading(panelId) {
+  const panel = document.getElementById(panelId);
+  const el = panel && panel.querySelector(".panel-loading");
+  if (el) el.classList.remove("visible");
+}
+
+// Switch the active temperature unit and refresh the entire page. The choice is
+// persisted immediately (so a reload never has to regenerate), and the actual
+// relabel/rebuild is deferred a couple of frames so the spinner can paint —
+// charts keep their °C-based geometry, so this is just relabeling, not a full
+// data regeneration.
+let unitSwitchPending = false;
+function setUnit(u) {
+  if ((u !== "C" && u !== "F") || u === prefs.unit || unitSwitchPending) return;
+  prefs.unit = u;
+  try {
+    localStorage.setItem("tempUnit", u);
+  } catch (e) {
+    /* storage unavailable — keep the in-memory preference */
+  }
+  // Reflect the toggle state right away for instant feedback.
+  document.querySelectorAll("#unit-toggle .unit-btn").forEach((b) => {
+    const on = b.dataset.unit === prefs.unit;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  const loader = document.getElementById("unit-loading");
+  if (loader) loader.classList.add("visible");
+  unitSwitchPending = true;
+  // setTimeout (not rAF) so the work still runs if the tab is backgrounded,
+  // while still yielding a frame for the spinner to paint.
+  setTimeout(() => {
+    refreshUnitLabels();
+    render(); // main explorer (map, charts, stats, legend)
+    window.dispatchEvent(new Event("unitchange")); // scrolly acts + chart axes
+    if (loader) loader.classList.remove("visible");
+    unitSwitchPending = false;
+  }, 30);
+}
+
+// =========================================================
 // DATA LOADING
 // =========================================================
 async function loadData() {
@@ -546,10 +688,10 @@ function showTooltip(event, d) {
   if (mode === "crossing") {
     headline =
       crossing === null
-        ? `never crosses ${threshold}°C`
-        : `crosses ${threshold}°C in ${crossing}`;
+        ? `never crosses ${fmtMag(+threshold)}`
+        : `crosses ${fmtMag(+threshold)} in ${crossing}`;
   } else {
-    headline = `${anom >= 0 ? "+" : ""}${anom.toFixed(2)}°C in ${year}`;
+    headline = `${fmtAnom(anom, 2)} in ${year}`;
   }
 
   tip.innerHTML = `
@@ -564,7 +706,7 @@ function showTooltip(event, d) {
     <div class="tip-headline">${headline}</div>
     <div class="tip-row">
       <span class="tip-key">2100 anomaly</span>
-      <span class="tip-val">${final >= 0 ? "+" : ""}${final.toFixed(1)}°C</span>
+      <span class="tip-val">${fmtAnom(final)}</span>
     </div>
     <div class="tip-row">
       <span class="tip-key">Scenario</span>
@@ -704,7 +846,9 @@ const legendModule = (() => {
       .style("letter-spacing", "0.1em")
       .style("color", "var(--ink-faint)")
       .text(
-        mode === "crossing" ? `Year crossing +${threshold}°C` : "Anomaly °C"
+        mode === "crossing"
+          ? `Year crossing +${fmtMag(+threshold)}`
+          : `Anomaly ${unitSym()}`
       );
 
     const colors =
@@ -721,7 +865,24 @@ const legendModule = (() => {
             "2080s",
             "≥2090",
           ]
-        : ["<0°", "0–1°", "1–2°", "2–3°", "3–4°", "4–5°", "5–6°", "≥6°"];
+        : (() => {
+            // Color bins are fixed in °C (domain [-1, 6]); relabel the bin
+            // edges in the active unit. Header already carries °C/°F.
+            const e = (c) => {
+              const v = toUnit(c);
+              return Number.isInteger(v) ? String(v) : v.toFixed(1);
+            };
+            return [
+              `<${e(0)}°`,
+              `${e(0)}–${e(1)}°`,
+              `${e(1)}–${e(2)}°`,
+              `${e(2)}–${e(3)}°`,
+              `${e(3)}–${e(4)}°`,
+              `${e(4)}–${e(5)}°`,
+              `${e(5)}–${e(6)}°`,
+              `≥${e(6)}°`,
+            ];
+          })();
 
     const swatches = container
       .append("div")
@@ -774,6 +935,10 @@ const globalChartModule = (() => {
       update();
     });
     ro.observe(svg.node());
+    window.addEventListener("unitchange", () => {
+      build();
+      update();
+    });
     build();
   }
 
@@ -820,7 +985,7 @@ const globalChartModule = (() => {
         d3
           .axisLeft(y)
           .ticks(5)
-          .tickFormat((d) => `${d}°`)
+          .tickFormat((d) => unitTick(d))
           .tickSize(-(width - m.left - m.right))
       );
 
@@ -855,7 +1020,7 @@ const globalChartModule = (() => {
       .attr("class", "threshold-label")
       .attr("x", width - m.right + 4)
       .attr("y", y(thNum) + 4)
-      .text(`+${thNum}°C`);
+      .text(`+${fmtMag(thNum)}`);
 
     // Scenario lines
     const order = ["ssp126", "ssp245", "ssp585"];
@@ -932,6 +1097,10 @@ const cellChartModule = (() => {
       update();
     });
     ro.observe(svg.node());
+    window.addEventListener("unitchange", () => {
+      build();
+      update();
+    });
     build();
     buildChips();
   }
@@ -999,7 +1168,7 @@ const cellChartModule = (() => {
         d3
           .axisLeft(y)
           .ticks(4)
-          .tickFormat((d) => `${d}°`)
+          .tickFormat((d) => unitTick(d))
           .tickSize(-(width - m.left - m.right))
       );
     g.selectAll(".axis line")
@@ -1105,7 +1274,7 @@ const cellChartModule = (() => {
         .attr("fill", "var(--ink)")
         .style("font-family", "var(--font-mono)")
         .style("font-size", "10px")
-        .text(`crosses ${thNum}°C in ${crossYr}`);
+        .text(`crosses ${fmtMag(thNum)} in ${crossYr}`);
     } else {
       g.append("text")
         .attr("class", "crossing-text")
@@ -1115,7 +1284,7 @@ const cellChartModule = (() => {
         .attr("fill", "var(--good)")
         .style("font-family", "var(--font-mono)")
         .style("font-size", "10px")
-        .text(`stays below ${thNum}°C`);
+        .text(`stays below ${fmtMag(thNum)}`);
     }
   }
   return { init, update };
@@ -1283,7 +1452,7 @@ function updateStats() {
   // Map title and subtitle
   if (state.mode === "crossing") {
     d3.select("#map-title").text(
-      `First year each region crosses +${state.threshold}°C`
+      `First year each region crosses +${fmtMag(+state.threshold)}`
     );
     d3.select("#map-sub").text(
       `Under ${SCENARIO_LABELS[state.scenario]} (${
@@ -1293,12 +1462,12 @@ function updateStats() {
   } else {
     d3.select("#map-title").text(`Temperature anomaly in ${state.year}`);
     d3.select("#map-sub").text(
-      `Under ${SCENARIO_LABELS[state.scenario]} · °C above 2015–2034 baseline`
+      `Under ${SCENARIO_LABELS[state.scenario]} · ${unitSym()} above 2015–2034 baseline`
     );
   }
 
   // Hero threshold
-  d3.select("#hero-threshold").text(`${state.threshold}°C`);
+  d3.select("#hero-threshold").text(fmtMag(+state.threshold));
 
   // Mode button year readout
   d3.select("#year-readout").text(state.year);
@@ -1375,6 +1544,11 @@ function wireControls() {
       playIcon.setAttribute("d", "M8 5v14l11-7z");
       clearTimeout(state.playTimer);
     }
+  });
+
+  // Temperature unit toggle (°C / °F)
+  document.querySelectorAll("#unit-toggle .unit-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setUnit(btn.dataset.unit));
   });
 }
 
@@ -1637,6 +1811,9 @@ const stripesModule = (() => {
       if (stripesBuilt) build();
     });
     ro.observe(svg.node());
+    window.addEventListener("unitchange", () => {
+      if (stripesBuilt) build();
+    });
     // First build is triggered explicitly via show() — stripes is the one act
     // visible at load.
 
@@ -1745,7 +1922,7 @@ const stripesModule = (() => {
         .attr("text-anchor", "start")
         .style("fill", stripeColor(endVal))
         .style("font-weight", 600)
-        .text(`+${endVal.toFixed(1)}°C`);
+        .text(fmtAnom(endVal));
     });
 
     // Title-ish caption above the stripes
@@ -1816,9 +1993,10 @@ const stripesModule = (() => {
           const v = data.globalMeans[sc][i];
           return `<div class="tip-row"><span class="tip-key" style="color:${stripeColor(
             v
-          )}">${SCENARIO_LABELS[sc]}</span><span class="tip-val">+${v.toFixed(
+          )}">${SCENARIO_LABELS[sc]}</span><span class="tip-val">${fmtAnom(
+            v,
             2
-          )}°C</span></div>`;
+          )}</span></div>`;
         }).join("");
         scrollyTip(
           "panel-stripes",
@@ -1919,6 +2097,8 @@ const scrollMapModule = (() => {
       if (built) build();
     });
     ro.observe(svg.node());
+    // Header label carries the threshold + unit; no temp inside the SVG itself.
+    window.addEventListener("unitchange", updateLabel);
     buildLegend(); // cheap; ready before the chart is built
 
     toolbar = createVizToolbar("panel-map", {
@@ -1954,7 +2134,7 @@ const scrollMapModule = (() => {
     const sEl = document.getElementById("scroll-map-scenario");
     const tEl = document.getElementById("scroll-map-threshold");
     if (sEl) sEl.textContent = SCENARIO_LABELS[state.scenario];
-    if (tEl) tEl.textContent = parseFloat(state.threshold);
+    if (tEl) tEl.textContent = fmtMag(+state.threshold);
   }
 
   // Recolor existing cells in place (cheap — no re-projection) when the
@@ -2220,8 +2400,8 @@ const scrollMapModule = (() => {
     const region = getRegionForCell(d.lat, d.lon);
     const headline =
       d.crossing == null
-        ? "never crosses +2°C by 2100"
-        : `crosses +2°C in ${d.crossing}`;
+        ? `never crosses +${fmtMag(+state.threshold)} by 2100`
+        : `crosses +${fmtMag(+state.threshold)} in ${d.crossing}`;
     scrollyTip(
       "panel-map",
       event,
@@ -2301,9 +2481,9 @@ const ridgeModule = (() => {
   function updateLabel() {
     const el = document.getElementById("ridge-scenario-label");
     if (el)
-      el.textContent = `${SCENARIO_LABELS[state.scenario]} · +${parseFloat(
-        state.threshold
-      )}°C`;
+      el.textContent = `${SCENARIO_LABELS[state.scenario]} · +${fmtMag(
+        +state.threshold
+      )}`;
   }
   function reset() {
     state.scenario = "ssp585";
@@ -2359,6 +2539,8 @@ const ridgeModule = (() => {
       if (built) build({ animate: false });
     });
     ro.observe(svg.node());
+    // Ridge axes are year × latitude; only the header label carries a unit.
+    window.addEventListener("unitchange", updateLabel);
 
     toolbar = createVizToolbar("panel-ridge", {
       groups: [
@@ -2400,7 +2582,7 @@ const ridgeModule = (() => {
     dims = { width, height, m };
 
     const cells = buildCellList(state.scenario, state.threshold);
-    const thLabel = `+${parseFloat(state.threshold)}°C`;
+    const thLabel = `+${fmtMag(+state.threshold)}`;
 
     const xMax = 2102;
     const xMin = 2018;
@@ -2727,16 +2909,39 @@ const beeswarmModule = (() => {
   let nodes = null;
   let toolbar = null;
   const state = { scenario: "ssp585", threshold: "2.0" };
+  // Cache settled dot positions per scenario|threshold|size so revisiting a
+  // combo (or just flipping units) reuses the layout instead of re-running the
+  // ~6,000-node force simulation.
+  const simCache = new Map();
 
   function thLabel() {
-    return `+${parseFloat(state.threshold)}°C`;
+    return `+${fmtMag(+state.threshold)}`;
   }
 
-  // Scenario/threshold change → recompute the layout and redraw.
+  function sizeKey() {
+    const { width, height } = svg.node().getBoundingClientRect();
+    return `${Math.round(width)}x${Math.round(height)}`;
+  }
+  function layoutKey() {
+    return `${state.scenario}|${state.threshold}|${sizeKey()}`;
+  }
+
+  // Scenario/threshold change → recompute the layout and redraw. Show a spinner
+  // only when the layout isn't cached (the force simulation is the slow bit).
   function rebuild() {
     nodes = null;
     revealed = true; // keep dots visible (no re-entrance animation on a swap)
-    build();
+    if (simCache.has(layoutKey())) {
+      build(); // cached — instant
+      return;
+    }
+    showPanelLoading("panel-beeswarm", "Laying out ~6,000 cells…");
+    // setTimeout so the spinner paints (and still fires if the tab is hidden)
+    // before the blocking force simulation runs.
+    setTimeout(() => {
+      build();
+      hidePanelLoading("panel-beeswarm");
+    }, 30);
   }
   function reset() {
     state.scenario = "ssp585";
@@ -2757,6 +2962,9 @@ const beeswarmModule = (() => {
       if (built) build();
     });
     ro.observe(svg.node());
+    window.addEventListener("unitchange", () => {
+      if (built) build();
+    });
     buildLegend(); // cheap; ready before the chart is built
 
     toolbar = createVizToolbar("panel-beeswarm", {
@@ -2933,20 +3141,36 @@ const beeswarmModule = (() => {
       n.y = bandY[n.band.id];
     });
 
-    // Run a quick force simulation offline
     const radius = Math.max(
       1.3,
       Math.min(2.6, Math.sqrt((width * height) / nodes.length) * 0.13)
     );
-    const sim = d3
-      .forceSimulation(nodes)
-      .alpha(0.9)
-      .alphaDecay(0.07)
-      .force("x", d3.forceX((d) => x(d.tx)).strength(0.95))
-      .force("y", d3.forceY((d) => bandY[d.band.id]).strength(0.1))
-      .force("collide", d3.forceCollide(radius + 0.15).strength(0.85))
-      .stop();
-    for (let i = 0; i < 140; i++) sim.tick();
+
+    // Reuse settled positions when this scenario|threshold|size was laid out
+    // before (e.g. on a unit flip); otherwise run the force simulation offline
+    // and cache the result.
+    const key = layoutKey();
+    const cached = simCache.get(key);
+    if (cached && cached.length === nodes.length) {
+      nodes.forEach((n, i) => {
+        n.x = cached[i][0];
+        n.y = cached[i][1];
+      });
+    } else {
+      const sim = d3
+        .forceSimulation(nodes)
+        .alpha(0.9)
+        .alphaDecay(0.07)
+        .force("x", d3.forceX((d) => x(d.tx)).strength(0.95))
+        .force("y", d3.forceY((d) => bandY[d.band.id]).strength(0.1))
+        .force("collide", d3.forceCollide(radius + 0.15).strength(0.85))
+        .stop();
+      for (let i = 0; i < 140; i++) sim.tick();
+      simCache.set(
+        key,
+        nodes.map((n) => [n.x, n.y])
+      );
+    }
 
     // Draw circles
     const dotG = g.append("g").attr("class", "bee-dots");
@@ -3143,6 +3367,9 @@ const fanModule = (() => {
       if (built) build();
     });
     ro.observe(svg.node());
+    window.addEventListener("unitchange", () => {
+      if (built) build();
+    });
   }
 
   function build() {
@@ -3182,7 +3409,7 @@ const fanModule = (() => {
         d3
           .axisLeft(y)
           .ticks(6)
-          .tickFormat((d) => `${d}°`)
+          .tickFormat((d) => unitTick(d))
           .tickSize(-(width - m.left - m.right))
       );
     g.selectAll(".fan-axis line")
@@ -3242,7 +3469,7 @@ const fanModule = (() => {
         .attr("class", "threshold-label")
         .attr("x", m.left + 4)
         .attr("y", y(t) - 4)
-        .text(`+${t}°C`);
+        .text(`+${fmtMag(t)}`);
     });
 
     // Today vertical
@@ -3296,7 +3523,7 @@ const fanModule = (() => {
             : "var(--bad)"
         )
         .style("opacity", revealed ? 1 : 0)
-        .text(`${SCENARIO_LABELS[sc]}: +${endVal.toFixed(1)}°C`);
+        .text(`${SCENARIO_LABELS[sc]}: ${fmtAnom(endVal)}`);
     });
 
     // Divergence annotation
@@ -3307,7 +3534,7 @@ const fanModule = (() => {
       .attr("y", y((hi[hi.length - 1] + lo[lo.length - 1]) / 2))
       .attr("text-anchor", "middle")
       .style("opacity", revealed ? 1 : 0)
-      .text(`Δ ${gap.toFixed(1)}°C`);
+      .text(`Δ ${fmtMag(gap)}`);
     g.append("text")
       .attr("class", "fan-divergence-note")
       .attr("x", x(2090))
@@ -3376,16 +3603,17 @@ const fanModule = (() => {
                 : "var(--bad)";
             return `<div class="tip-row"><span class="tip-key" style="color:${col}">${
               SCENARIO_LABELS[sc]
-            }</span><span class="tip-val">+${v.toFixed(2)}°C</span></div>`;
+            }</span><span class="tip-val">${fmtAnom(v, 2)}</span></div>`;
           })
           .join("");
         scrollyTip(
           "panel-fan",
           event,
           `<div class="tip-headline" style="font-size:15px">${yr}</div>${rows}` +
-            `<div class="tip-row"><span class="tip-key">spread</span><span class="tip-val">${(
-              hi - lo
-            ).toFixed(2)}°C</span></div>`
+            `<div class="tip-row"><span class="tip-key">spread</span><span class="tip-val">${fmtMag(
+              hi - lo,
+              2
+            )}</span></div>`
         );
       })
       .on("pointerleave", () => {
@@ -3444,6 +3672,7 @@ const lifetimeModule = (() => {
   // Compute first crossing of +2°C for various reference series
   function getMilestones(scenario) {
     const TH = 2.0;
+    const cross = `crosses +${fmtMag(TH)}`;
     const years = data.grid.years;
     const findCross = (series) => {
       for (let i = 0; i < series.length; i++)
@@ -3454,17 +3683,17 @@ const lifetimeModule = (() => {
     const items = [];
     items.push({
       key: "global",
-      label: "Global mean crosses +2°C",
+      label: `Global mean ${cross}`,
       year: findCross(data.globalMeans[scenario]),
       color: "var(--accent)",
     });
     const r = data.regionalMeans[scenario];
     const named = [
-      { k: "Arctic", label: "Arctic crosses +2°C", color: "#7a0a04" },
-      { k: "Europe", label: "Europe crosses +2°C", color: "#ff5c2b" },
-      { k: "South Asia", label: "South Asia crosses +2°C", color: "#ffaa3d" },
-      { k: "Amazon", label: "Amazon crosses +2°C", color: "#88b8c4" },
-      { k: "Antarctic", label: "Antarctic crosses +2°C", color: "#5fa8d3" },
+      { k: "Arctic", label: `Arctic ${cross}`, color: "#7a0a04" },
+      { k: "Europe", label: `Europe ${cross}`, color: "#ff5c2b" },
+      { k: "South Asia", label: `South Asia ${cross}`, color: "#ffaa3d" },
+      { k: "Amazon", label: `Amazon ${cross}`, color: "#88b8c4" },
+      { k: "Antarctic", label: `Antarctic ${cross}`, color: "#5fa8d3" },
     ];
     named.forEach((n) => {
       if (r[n.k])
@@ -3529,6 +3758,9 @@ const lifetimeModule = (() => {
       if (built) build();
     });
     ro.observe(svg.node());
+    window.addEventListener("unitchange", () => {
+      if (built) build();
+    });
 
     // Submit birth year (button or Enter in the input)
     document.getElementById("lifetime-go").addEventListener("click", start);
@@ -3648,7 +3880,7 @@ const lifetimeModule = (() => {
         d3
           .axisLeft(y)
           .ticks(5)
-          .tickFormat((d) => `+${d}°`)
+          .tickFormat((d) => `+${unitTick(d)}`)
           .tickSize(-(width - m.left - m.right))
       );
     g.selectAll(".life-axis-y line")
@@ -3668,7 +3900,7 @@ const lifetimeModule = (() => {
         .attr("x", width - m.right - 2)
         .attr("y", y(t) - 5)
         .attr("text-anchor", "end")
-        .text(`+${t}°C`);
+        .text(`+${fmtMag(t)}`);
     });
 
     // ---- Lifetime warming trajectory ----
@@ -3781,7 +4013,7 @@ const lifetimeModule = (() => {
         .attr("y", -13)
         .style("fill", "var(--ink-faint)")
         .style("font-size", "8.5px")
-        .text(mi.label.replace(" crosses +2°C", " +2°C"));
+        .text(mi.label.replace(" crosses +", " +"));
     });
 
     // ---- Birth handle (draggable) — only when the birth year is in view ----
@@ -3891,11 +4123,12 @@ const lifetimeModule = (() => {
       badgeText.text(label);
       const tw = label.length * 6.2 + 16;
       badgeRect.attr("x", -tw / 2).attr("width", tw);
-      const signed = (n) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(1)}`;
-      headline.text(`At age ${age}, you live in a ${signed(v)}°C world.`);
+      const signed = (n) =>
+        `${n >= 0 ? "+" : "−"}${Math.abs(toUnit(n)).toFixed(1)}${unitSym()}`;
+      headline.text(`At age ${age}, you live in a ${signed(v)} world.`);
       subline.text(
         delta >= 0.05
-          ? `That's +${delta.toFixed(1)}°C hotter than the year you were born.`
+          ? `That's +${fmtMag(delta)} hotter than the year you were born.`
           : `Right around the warming baseline of your birth year.`
       );
     }
@@ -4244,6 +4477,11 @@ async function main() {
       build();
       await nextTick();
     }
+
+    // Apply a persisted unit preference to all static labels + toolbar buttons
+    // now that every panel and its toolbar exist. Charts already read prefs at
+    // build time, so this only syncs the markup-driven bits.
+    refreshUnitLabels();
 
     // Everything is rendered — unlock scrolling and flip the cue.
     clearTimeout(loadingNotice);

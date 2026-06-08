@@ -35,6 +35,23 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body class="scroll-locked">
+    <!-- Persistent temperature-unit toggle (Celsius / Fahrenheit) -->
+    <div
+      class="unit-toggle"
+      id="unit-toggle"
+      role="group"
+      aria-label="Temperature units"
+    >
+      <button class="unit-btn active" data-unit="C" aria-pressed="true">
+        °C
+      </button>
+      <button class="unit-btn" data-unit="F" aria-pressed="false">°F</button>
+    </div>
+    <div class="unit-loading" id="unit-loading" role="status" aria-hidden="true">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="unit-loading-text">Converting…</span>
+    </div>
+
     <!-- ============== HERO ============== -->
     <header class="hero">
       <div class="hero-gridlines" aria-hidden="true"></div>
@@ -97,11 +114,17 @@
         <figure class="hero-scale">
           <div class="scale-bar" aria-hidden="true"></div>
           <figcaption class="scale-ticks">
-            <span>−1°</span><span>0°</span><span>+1°</span><span>+2°</span
-            ><span>+3°</span><span>+4°</span><span>+5°C</span>
+            <span data-temp="-1" data-temp-fmt="stick">−1°</span
+            ><span data-temp="0" data-temp-fmt="stick">0°</span
+            ><span data-temp="1" data-temp-fmt="stick">+1°</span
+            ><span data-temp="2" data-temp-fmt="stick">+2°</span
+            ><span data-temp="3" data-temp-fmt="stick">+3°</span
+            ><span data-temp="4" data-temp-fmt="stick">+4°</span
+            ><span data-temp="5" data-temp-fmt="smag">+5°C</span>
           </figcaption>
           <p class="scale-caption">
-            Global mean anomaly · °C relative to the 2015–2034 baseline
+            Global mean anomaly · <span data-unitsym>°C</span> relative to the
+            2015–2034 baseline
           </p>
         </figure>
 
@@ -128,9 +151,12 @@
           <svg id="stripes-svg" class="full-svg"></svg>
           <div class="viz-caption" id="stripes-caption">
             <span class="caption-key" style="background: #1d3a4f"></span>cooler
-            <span class="caption-key" style="background: #5fa8d3"></span>+1°C
-            <span class="caption-key" style="background: #ffaa3d"></span>+3°C
-            <span class="caption-key" style="background: #c2261b"></span>+5°C
+            <span class="caption-key" style="background: #5fa8d3"></span
+            ><span data-temp="1" data-temp-fmt="smag">+1°C</span>
+            <span class="caption-key" style="background: #ffaa3d"></span
+            ><span data-temp="3" data-temp-fmt="smag">+3°C</span>
+            <span class="caption-key" style="background: #c2261b"></span
+            ><span data-temp="5" data-temp-fmt="smag">+5°C</span>
           </div>
         </div>
 
@@ -140,8 +166,8 @@
             <span class="viz-label"
               >Act II · When each region crosses +<span
                 id="scroll-map-threshold"
-                >2</span
-              >°C · <span id="scroll-map-scenario">SSP5-8.5</span></span
+                >2°C</span
+              > · <span id="scroll-map-scenario">SSP5-8.5</span></span
             >
           </div>
           <svg id="scroll-map" class="full-svg"></svg>
@@ -166,7 +192,7 @@
           <div class="viz-meta">
             <span class="viz-label"
               >Act IV · Every patch of Earth, plotted by when it crosses
-              +2°C</span
+              +<span data-temp="2" data-temp-fmt="mag">2°C</span></span
             >
           </div>
           <svg id="beeswarm-svg" class="full-svg"></svg>
@@ -267,13 +293,16 @@
           <p class="step-eyebrow">Act II — The geography</p>
           <h3>But warming isn't uniform.</h3>
           <p>
-            The Arctic crosses +2°C this decade; the Southern Ocean may never. A
-            place "crosses" when it first sits 2°C above its own baseline.
+            The Arctic crosses +<span data-temp="2" data-temp-fmt="mag">2°C</span>
+            this decade; the Southern Ocean may never. A place "crosses" when it
+            first sits <span data-temp="2" data-temp-fmt="mag">2°C</span> above
+            its own baseline.
           </p>
           <p class="step-howto">
             <strong>How to read it</strong>
-            Color = the year it crosses +2°C: red early, blue late, grey never.
-            Hover for the exact year.
+            Color = the year it crosses
+            +<span data-temp="2" data-temp-fmt="mag">2°C</span>: red early, blue
+            late, grey never. Hover for the exact year.
           </p>
         </div>
 
@@ -287,7 +316,8 @@
           <p class="step-howto">
             <strong>How to read it</strong>
             Each curve is one latitude band. Taller at a given year = more of
-            that band crosses +2°C then.
+            that band crosses +<span data-temp="2" data-temp-fmt="mag">2°C</span>
+            then.
           </p>
         </div>
 
@@ -296,12 +326,15 @@
           <h3>Six thousand pieces of the planet.</h3>
           <p>
             Each dot is one patch of Earth. The red wall on the left is the
-            Arctic; the blue cluster past the line may never cross +2°C.
+            Arctic; the blue cluster past the line may never cross
+            +<span data-temp="2" data-temp-fmt="mag">2°C</span>.
           </p>
           <p class="step-howto">
             <strong>How to read it</strong>
             Left→right = crossing year. Drag to sweep a year and see the share
-            of Earth already past +2°C; hover a dot for its location.
+            of Earth already past
+            +<span data-temp="2" data-temp-fmt="mag">2°C</span>; hover a dot for
+            its location.
           </p>
         </div>
 
@@ -309,7 +342,8 @@
           <p class="step-eyebrow">Act V — The choice ahead</p>
           <h3>Three futures, branching from now.</h3>
           <p>
-            The lines share a past, then fan apart. Nearly 4°C separates rapid
+            The lines share a past, then fan apart. Nearly
+            <span data-temp="4" data-temp-fmt="mag">4°C</span> separates rapid
             decarbonization (SSP1-2.6) from heavy fossil use (SSP5-8.5).
           </p>
           <p class="step-howto">
@@ -323,14 +357,16 @@
           <p class="step-eyebrow">Act V — In a lifetime</p>
           <h3>What does this mean for you?</h3>
           <p>
-            Type your birth year. These are the +2°C milestones your generation
-            will actually live through — and the scenario shifts them by
-            decades.
+            Type your birth year. These are the
+            +<span data-temp="2" data-temp-fmt="mag">2°C</span> milestones your
+            generation will actually live through — and the scenario shifts them
+            by decades.
           </p>
           <p class="step-howto">
             <strong>How to read it</strong>
             The line is warming over your lifetime; top dots mark when regions
-            cross +2°C. Drag or hover for the warming at any age.
+            cross +<span data-temp="2" data-temp-fmt="mag">2°C</span>. Drag or
+            hover for the warming at any age.
           </p>
         </div>
 
@@ -404,19 +440,21 @@
             aria-label="Warming threshold"
           >
             <button class="seg-btn" data-value="1.5">
-              <span class="seg-name">1.5°C</span>
+              <span class="seg-name" data-temp="1.5" data-temp-fmt="mag"
+                >1.5°C</span
+              >
               <span class="seg-desc">Paris goal</span>
             </button>
             <button class="seg-btn active" data-value="2.0">
-              <span class="seg-name">2°C</span>
+              <span class="seg-name" data-temp="2" data-temp-fmt="mag">2°C</span>
               <span class="seg-desc">Paris ceiling</span>
             </button>
             <button class="seg-btn" data-value="3.0">
-              <span class="seg-name">3°C</span>
+              <span class="seg-name" data-temp="3" data-temp-fmt="mag">3°C</span>
               <span class="seg-desc">Severe</span>
             </button>
             <button class="seg-btn" data-value="4.0">
-              <span class="seg-name">4°C</span>
+              <span class="seg-name" data-temp="4" data-temp-fmt="mag">4°C</span>
               <span class="seg-desc">Catastrophic</span>
             </button>
           </div>
@@ -574,7 +612,8 @@
             scroll-driven story called <em>A World on Fire</em>. Instead of
             dumping everything on one page, the reader now scrolls through six
             acts, each with a different chart: warming stripes, an annotated
-            world map, a ridge plot showing when different latitudes cross +2°C,
+            world map, a ridge plot showing when different latitudes cross
+            +<span data-temp="2" data-temp-fmt="mag">2°C</span>,
             a beeswarm where every dot is a grid cell, a fan chart of how the
             three SSP scenarios split apart, and finally a timeline you can
             personalize with your own birth year. We wanted at least half the
