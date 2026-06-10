@@ -4057,6 +4057,32 @@ const lifetimeModule = (() => {
       );
     }
 
+    const eventYearButtons = document.querySelectorAll(".event-year-btn");
+    const birthInput = document.getElementById("birth-year-input");
+    const lifetimeGo = document.getElementById("lifetime-go");
+    const lifetimeReset = document.getElementById("lifetime-reset");
+    const lifetimeHint = document.getElementById("lifetime-hint");
+    
+    eventYearButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const year = button.dataset.year;
+        const label = button.dataset.label;
+    
+        eventYearButtons.forEach((b) => b.classList.remove("active"));
+        button.classList.add("active");
+    
+        if (lifetimeReset) {
+          lifetimeReset.click();
+        }
+    
+        birthInput.value = year;
+    
+        lifetimeHint.textContent = `Tracing warming from ${label} (${year}). You can still type your own birth year above.`;
+    
+        lifetimeGo.click();
+      });
+    });
+    
     // ---- Header / live readout ----
     g.append("text")
       .attr("class", "life-eyebrow")
@@ -4182,7 +4208,26 @@ const lifetimeModule = (() => {
 
     built = true;
   }
-
+  const eventYearButtons = document.querySelectorAll(".event-year-btn");
+  const birthInput = document.getElementById("birth-year-input");
+  const lifetimeGo = document.getElementById("lifetime-go");
+  const lifetimeHint = document.getElementById("lifetime-hint");
+  
+  eventYearButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const year = button.dataset.year;
+      const label = button.dataset.label;
+  
+      // Fill the existing birth year input
+      birthInput.value = year;
+  
+      // Optional: update the hint text
+      lifetimeHint.textContent = `Tracing warming from ${label}. Since the climate data is yearly, the chart starts at ${year}.`;
+  
+      // This runs the same logic as clicking "See my lifetime"
+      lifetimeGo.click();
+    });
+  });
   function show() {
     // Graph stays hidden behind the popup until the user submits a birth year.
     if (started && !built) build();
