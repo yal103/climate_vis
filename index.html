@@ -603,55 +603,117 @@
     <!-- ============== WRITEUP ============== -->
     <section class="writeup" id="writeup">
       <div class="writeup-inner">
-        <h2>Project writeup</h2>
+        <h2>Project Writeup</h2>
 
         <article class="writeup-block">
-          <h3>What we've done so far</h3>
+          <h3>If Climate Change Is Global, Why Doesn’t It Feel The Same Everywhere?</h3>
           <p>
-            We took our Project 3 dashboard and rebuilt it from scratch as a
-            scroll-driven story called <em>A World on Fire</em>. Instead of
-            dumping everything on one page, the reader now scrolls through six
-            acts, each with a different chart: warming stripes, an annotated
-            world map, a ridge plot showing when different latitudes cross
-            +<span data-temp="2" data-temp-fmt="mag">2°C</span>,
-            a beeswarm where every dot is a grid cell, a fan chart of how the
-            three SSP scenarios split apart, and finally a timeline you can
-            personalize with your own birth year. We wanted at least half the
-            visuals to be something other than a map, so the ridge plot and
-            beeswarm were new territory for us.
+            Imagine scrolling from the year you were born to the future you might grow old in, 
+            watching the world around you warm year by year. In some places, the change might 
+            look gradual. In others, that same future might arrive much earlier. Climate change 
+            is usually explained as one global temperature number, and that number is useful 
+            because it gives people a simple way to understand the overall trend. But it also 
+            hides a lot of the story.
           </p>
           <p>
-            On the code side, each visualization is its own D3 module, and we
-            use Scrollama to detect which text block the reader is on and swap
-            the active chart accordingly. The original Project 3 dashboard (map,
-            line charts, histogram, year scrubber) still lives at the bottom so
-            people can poke around after the narrative ends. Everything pulls
-            from the same CMIP6 CESM2 data we processed in
-            <code>project-3.ipynb</code>, so no new datasets were needed.
+            That difference is what we wanted to make visible in A World on Fire. We built it 
+            as a scroll-driven story about how climate change does not happen evenly everywhere. 
+            Some places warm much faster than others, some regions cross dangerous thresholds 
+            earlier, and different emissions futures can lead to very different outcomes. Therefore, 
+            we wanted our project to let people move through the bigger climate story first, then 
+            explore the data more freely at the end.
           </p>
         </article>
 
         <article class="writeup-block">
-          <h3>What will be the most challenging part</h3>
+          <h3>Turning Climate Data Into A Story</h3>
           <p>
-            Honestly, the biggest challenge is making six totally different
-            chart types feel like they belong together. Going from color-coded
-            stripes to a density ridge plot to a force-layout beeswarm is a lot
-            of context-switching for the reader. We're relying on a shared color
-            palette across latitude bands and careful narration text to tie
-            everything together, but it's tricky to get right and we're still
-            tweaking the transitions between panels.
+            Climate data can be hard to understand because it is both huge and personal at the same time. 
+            On one side, it is made up of global models, scenarios, grids, and temperature projections. 
+            On the other side, it is about the years people live through, the places they call home, and 
+            the futures they might experience. A lot of climate visualizations end up leaning too far in 
+            one direction. They are either simple enough to understand but too general to feel meaningful, 
+            or detailed enough to be accurate but too overwhelming to follow.
           </p>
           <p>
-            The beeswarm is also a real performance headache. There are about
-            6,000 dots and we run a d3-force collision simulation to lay them
-            out, so we had to pre-settle it off-screen (140 ticks before
-            painting anything) to avoid locking up the browser. It still has to
-            re-run whenever you switch scenarios. Beyond that, the lifetime
-            timeline at the end needs to land emotionally without being
-            cluttered, and the whole thing has to work on phones where our
-            two-column sticky layout has to collapse into a single column. Lots
-            of small problems that add up.
+            That is why we designed A World on Fire as a guided story first and a dashboard second. Instead 
+            of giving the viewer every control immediately, we start with visuals that are easier to read, 
+            like warming stripes and scenario lines, and then build toward more detailed views like the 
+            latitude ridge plot, threshold map, beeswarm, and lifetime chart. Each section adds a new layer 
+            to the same idea: climate change is not just about whether the Earth warms, but how fast it warms, 
+            where that warming happens first, and how different the future can look depending on the scenario.
+          </p>
+        </article>
+
+        <article class="writeup-block">
+          <h3>What If You Could See Your Own Future?</h3>
+          <p>
+            It is one thing to say that different futures are possible, but it feels different when you can 
+            switch between them yourself. The interactions in our project are meant to help the viewer compare, 
+            question, and notice patterns instead of only reading about them. When someone changes the SSP scenario, 
+            they can see how much the future depends on emissions. When they change the warming threshold, they can 
+            see which regions cross that point earlier. When they scrub through years, warming becomes something that
+            moves across time instead of something shown in one frozen image.
+          </p>
+          <p>
+            The interactive dashboard at the end gives the reader more freedom after they have already gone through 
+            the guided story. By that point, they have seen the main patterns, so the dashboard becomes a place to 
+            explore instead of a confusing starting point. They can compare regions, scenarios, thresholds, and 
+            years in their own way. This was important to us because the project is supposed to be an explorable 
+            explanation, not just a slideshow of charts. The story explains what matters, and the interactions let 
+            the viewer test those ideas for themselves.
+          </p>
+        </article>
+
+        <article class="writeup-block">
+          <h3>Showing More Than A Map Can Tell</h3>
+          <p>
+            Since climate change affects the whole world, it would have been easy to rely mostly on maps. But maps are not 
+            always the best way to show time, uncertainty, or personal experience. That is why we used different chart 
+            types for different parts of the story. Warming stripes make long-term change feel immediate. Maps show where
+            warming is concentrated. Ridge plots show how latitude bands cross thresholds at different times. The beeswarm 
+            turns thousands of grid cells into individual points, making the data feel more detailed. The lifetime chart 
+            connects the climate record back to the viewer’s own timeline.
+          </p>
+          <p>
+            The challenge with using so many visuals is that the page could start to feel disconnected. To avoid that, we 
+            reused similar colors, scenario labels, and section layouts throughout the project. We also included short 
+            annotations and “how to read this” text so the viewer knows what each chart is trying to show. These annotations 
+            help point out patterns that might be easy to miss, like earlier Arctic warming, regional threshold crossings, 
+            and the way mitigation changes the shape of the future. Without those notes, the charts would still show the data, 
+            but they would not guide the viewer through the argument as clearly.
+          </p>
+        </article>
+
+        <article class="writeup-block">
+          <h3>Challenge Accepted!</h3>
+          <p>
+            The hardest part was making the project feel like one connected story instead of a collection of separate visualizations. 
+            We had warming stripes, maps, ridge plots, beeswarms, fan charts, and a personalized timeline, and each one asks the viewer 
+            to read the data in a different way. Going from one chart type to another can be a lot of context-switching. We had to think 
+            carefully about how each section introduced the next one so the reader would understand why the visualization changed.
+          </p>
+          <p>
+            The beeswarm was also one of the more challenging parts because it had to show thousands of points while still staying readable 
+            and smooth. We wanted each dot to represent part of the climate grid, but too many dots can quickly become messy or slow. That 
+            made us think more carefully about performance, layout, and whether the interaction was actually helping the viewer understand the data. 
+            Overall, the biggest challenge was balancing complexity with clarity. We wanted the project to feel rich and interactive, but not so crowded 
+            that the main message got lost.
+          </p>
+        </article>
+
+        <article class="writeup-block">
+          <h3>Final Takeaway</h3>
+          <p>
+            By the end of the project, we want viewers to understand that climate change is not one fixed future. Every scenario shows warming, but the 
+            amount of warming, the timing of threshold crossings, and the places most affected can change a lot depending on emissions choices. A global 
+            average can tell us that the planet is warming, but it cannot show the full human and regional experience of that warming on its own.
+          </p>
+          <p>
+            That is why A World on Fire moves between a guided story and an interactive dashboard. The guided sections help the viewer understand the main 
+            patterns, while the dashboard lets them explore those patterns more freely. Our main takeaway is that climate change is global, but it is not 
+            experienced equally. It unfolds differently across regions, across lifetimes, and across possible futures, which means the choices made now still 
+            shape what kind of world people grow old in.
           </p>
         </article>
       </div>
