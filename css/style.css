@@ -2007,10 +2007,13 @@ body.scroll-locked {
   transform: none;
   width: auto;
   max-width: none;
-  padding: 9px 14px;
+  padding: 8px 18px;
   border-radius: 10px;
-  flex-direction: row;
-  gap: 12px;
+  /* Two tidy centered rows (controls, then quick-picks) instead of a single
+     row whose children wrap into ragged uneven columns. */
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
   box-shadow: var(--shadow-1);
   background: rgba(28, 26, 22, 0.82);
   backdrop-filter: blur(6px);
@@ -2021,17 +2024,25 @@ body.scroll-locked {
   display: none;
 }
 .lifetime-started .lc-controls {
-  flex: 1;
+  width: 100%;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px 12px;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 4px 0;
 }
 .lifetime-started .lc-scenarios {
   display: inline-flex;
 }
+/* Keep the scenario picker grouped with its help button rather than shoved to
+   the far edge by the popup's margin-left:auto. */
+.lifetime-started .lifetime-scenario-toggle {
+  margin-left: 0;
+}
 .lifetime-started .lc-reset {
   display: inline-flex;
   padding: 6px 10px;
+  margin-left: 4px;
 }
 .lifetime-started .lc-label {
   font-size: 14px;
@@ -2044,6 +2055,23 @@ body.scroll-locked {
 }
 .lifetime-started .seg-btn-mini {
   padding: 5px 8px;
+}
+/* Second row: the "year people remember" quick-picks, on their own full-width
+   line with a hairline divider so the toolbar reads as two intentional rows. */
+.lifetime-started .event-year-row {
+  width: 100%;
+  margin-top: 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  justify-content: center;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 0.68rem;
+}
+.lifetime-started .event-year-btn {
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: 0.66rem;
 }
 
 #birth-year-input {

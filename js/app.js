@@ -3720,11 +3720,14 @@ const lifetimeModule = (() => {
     readBirthInput();
     if (started) return;
     started = true;
-    document.getElementById("panel-lifetime").classList.add("lifetime-started");
+    const panel = document.getElementById("panel-lifetime");
+    panel.classList.add("lifetime-started");
     document.getElementById("lifetime-hint").textContent =
       "Drag across the chart to zoom into any stretch of your life.";
     build();
     reveal();
+    // The control bar then morphs/wraps to its final height; a ResizeObserver on
+    // it (set up in init) rebuilds the chart so the header + plot clear it.
   }
 
   // Reset the *view* only (keep the birth year): clear zoom + scrub, restore
@@ -3754,10 +3757,30 @@ const lifetimeModule = (() => {
   function init() {
     svg = d3.select("#lifetime-svg");
     g = svg.append("g").attr("class", "lifetime-root");
-    const ro = new ResizeObserver(() => {
-      if (built) build();
-    });
+    // Coalesce rapid rebuilds (e.g. while the control bar morphs/wraps over many
+    // frames) into one build per frame.
+    let buildScheduled = false;
+    const scheduleBuild = () => {
+      if (buildScheduled || !built) return;
+      buildScheduled = true;
+      requestAnimationFrame(() => {
+        buildScheduled = false;
+        if (built) build();
+      });
+    };
+    const ro = new ResizeObserver(scheduleBuild);
     ro.observe(svg.node());
+    // The floating control bar's height depends on how its buttons wrap, and it
+    // changes as the bar morphs in or the window resizes. Observe it so the
+    // chart header + plot are always re-laid-out below the bar's real bottom
+    // edge — a fixed guess gets hidden behind a taller, wrapped bar.
+    const card = document.querySelector("#panel-lifetime .lifetime-card");
+    if (card) {
+      const cardRo = new ResizeObserver(() => {
+        if (built && started) scheduleBuild();
+      });
+      cardRo.observe(card);
+    }
     window.addEventListener("unitchange", () => {
       if (built) build();
     });
@@ -3804,9 +3827,23 @@ const lifetimeModule = (() => {
     if (!width || !height) return;
     svg.attr("viewBox", `0 0 ${width} ${height}`);
     // Once started, the floating control bar sits across the top of the panel,
-    // so drop the chart header + plot down to clear it.
-    const headerY = started ? 78 : 8;
-    const m = { top: started ? 168 : 120, right: 96, bottom: 56, left: 64 };
+    // so drop the chart header + plot down to clear it. The bar wraps to a
+    // different height depending on width, so measure its real bottom edge
+    // rather than assuming a fixed height — otherwise it hides the chart title.
+    let headerY = 8;
+    let topMargin = 120;
+    if (started) {
+      const card = document.querySelector("#panel-lifetime .lifetime-card");
+      const panel = document.getElementById("panel-lifetime");
+      let barBottom = 94; // fallback ≈ default single-row bar
+      if (card && panel) {
+        barBottom =
+          card.getBoundingClientRect().bottom - panel.getBoundingClientRect().top;
+      }
+      headerY = barBottom + 24;
+      topMargin = headerY + 90;
+    }
+    const m = { top: topMargin, right: 96, bottom: 56, left: 64 };
     dims = { width, height, m };
     g.selectAll("*").remove();
 
